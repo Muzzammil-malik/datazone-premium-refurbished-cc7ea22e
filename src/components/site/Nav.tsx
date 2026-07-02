@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, ShoppingBag, Heart, Menu, X } from "lucide-react";
+import { Search, ShoppingBag, Heart, Menu, X, GitCompare } from "lucide-react";
+import { drawers, useStore } from "@/lib/store";
 
 const links = [
   { to: "/", label: "Home" },
@@ -14,6 +15,9 @@ const links = [
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const cartCount = useStore((s) => s.cart.reduce((n, c) => n + c.qty, 0));
+  const wishCount = useStore((s) => s.wishlist.length);
+  const compareCount = useStore((s) => s.compare.length);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 8);
     on();
@@ -52,12 +56,35 @@ export function Nav() {
           <button aria-label="Search" className="p-2 hover:bg-surface rounded-full transition">
             <Search className="size-[18px]" strokeWidth={1.5} />
           </button>
-          <button aria-label="Wishlist" className="hidden sm:grid place-items-center p-2 hover:bg-surface rounded-full transition">
+          {compareCount > 0 && (
+            <button
+              aria-label="Compare"
+              onClick={() => drawers.openCompare()}
+              className="hidden sm:grid place-items-center p-2 hover:bg-surface rounded-full transition relative"
+            >
+              <GitCompare className="size-[18px]" strokeWidth={1.5} />
+              <Badge n={compareCount} />
+            </button>
+          )}
+          <button
+            aria-label="Wishlist"
+            onClick={() => drawers.openWishlist()}
+            className="hidden sm:grid place-items-center p-2 hover:bg-surface rounded-full transition relative"
+          >
             <Heart className="size-[18px]" strokeWidth={1.5} />
+            {wishCount > 0 && <Badge n={wishCount} />}
           </button>
-          <button aria-label="Cart" className="p-2 hover:bg-surface rounded-full transition relative">
+          <button
+            aria-label="Cart"
+            onClick={() => drawers.openCart()}
+            className="p-2 hover:bg-surface rounded-full transition relative"
+          >
             <ShoppingBag className="size-[18px]" strokeWidth={1.5} />
-            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-[color:var(--accent-blue)]" />
+            {cartCount > 0 ? (
+              <Badge n={cartCount} />
+            ) : (
+              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-[color:var(--accent-blue)]" />
+            )}
           </button>
           <button
             aria-label={open ? "Close menu" : "Open menu"}
@@ -86,5 +113,13 @@ export function Nav() {
         </div>
       )}
     </header>
+  );
+}
+
+function Badge({ n }: { n: number }) {
+  return (
+    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-foreground text-background text-[10px] font-medium leading-none">
+      {n > 9 ? "9+" : n}
+    </span>
   );
 }
