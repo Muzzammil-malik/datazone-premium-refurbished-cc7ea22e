@@ -1,8 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { getProduct, inr, products } from "@/lib/products";
-import { ShieldCheck, Truck, PackageCheck, Star, ArrowRight, Heart, Check } from "lucide-react";
+import { ShieldCheck, Truck, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare } from "lucide-react";
 import { ProductCard } from "@/components/site/ProductCard";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { cart, compare, drawers, recent, useStore, wishlist } from "@/lib/store";
+import { RecentlyViewed } from "@/components/site/RecentlyViewed";
 
 export const Route = createFileRoute("/product/$id")({
   loader: ({ params }) => {
@@ -36,6 +39,12 @@ function ProductPage() {
   const p = Route.useLoaderData();
   const related = products.filter((x) => x.id !== p.id && x.category === p.category).slice(0, 4);
   const off = Math.round(((p.original - p.price) / p.original) * 100);
+  const wished = useStore((s) => s.wishlist.includes(p.id));
+  const compared = useStore((s) => s.compare.includes(p.id));
+
+  useEffect(() => {
+    recent.push(p.id);
+  }, [p.id]);
 
   return (
     <div className="pb-24">
@@ -89,9 +98,32 @@ function ProductPage() {
           </div>
 
           <div className="mt-8 flex gap-3">
-            <button className="flex-1 rounded-full bg-foreground text-background py-4 text-sm font-medium hover:opacity-90 transition">Add to cart</button>
-            <button aria-label="Wishlist" className="grid place-items-center size-[52px] rounded-full hairline hover:border-foreground transition">
-              <Heart className="size-4" strokeWidth={1.5} />
+            <button
+              onClick={() => {
+                cart.add(p.id);
+                drawers.openCart();
+              }}
+              className="flex-1 rounded-full bg-foreground text-background py-4 text-sm font-medium hover:opacity-90 transition"
+            >
+              Add to cart
+            </button>
+            <button
+              aria-label="Wishlist"
+              onClick={() => wishlist.toggle(p.id)}
+              className={`grid place-items-center size-[52px] rounded-full hairline transition ${
+                wished ? "bg-foreground text-background border-foreground" : "hover:border-foreground"
+              }`}
+            >
+              <Heart className="size-4" strokeWidth={1.5} fill={wished ? "currentColor" : "none"} />
+            </button>
+            <button
+              aria-label="Compare"
+              onClick={() => compare.toggle(p.id)}
+              className={`grid place-items-center size-[52px] rounded-full hairline transition ${
+                compared ? "bg-foreground text-background border-foreground" : "hover:border-foreground"
+              }`}
+            >
+              <GitCompare className="size-4" strokeWidth={1.5} />
             </button>
           </div>
 
@@ -138,6 +170,8 @@ function ProductPage() {
           </div>
         </div>
       )}
+
+      <RecentlyViewed excludeId={p.id} />
     </div>
   );
 }

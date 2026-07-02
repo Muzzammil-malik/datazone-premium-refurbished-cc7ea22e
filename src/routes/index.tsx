@@ -11,6 +11,7 @@ import { ProductCard } from "@/components/site/ProductCard";
 import { BrandMarquee } from "@/components/site/Marquee";
 import { Reveal } from "@/components/site/Reveal";
 import { Counter } from "@/components/site/Counter";
+import { RecentlyViewed } from "@/components/site/RecentlyViewed";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +32,7 @@ function Index() {
       <TrustBar />
       <WhyDatazone />
       <FeaturedProducts />
+      <RecentlyViewed />
       <Categories />
       <RefurbishmentProcess />
       <Stats />
