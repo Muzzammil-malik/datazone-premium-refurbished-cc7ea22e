@@ -3,6 +3,7 @@ import { compare, drawers, useStore, useUI, cart } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
 import { GitCompare, X, ShoppingBag } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Fragment } from "react";
 
 export function CompareBar() {
   const ids = useStore((s) => s.compare);
@@ -123,8 +124,8 @@ export function CompareDrawer() {
               ))}
 
               {rows.map((row) => (
-                <>
-                  <div key={`l-${row.label}`} className="py-3 text-xs text-ink-soft uppercase tracking-wider self-center">
+                <Fragment key={row.label}>
+                  <div className="py-3 text-xs text-ink-soft uppercase tracking-wider self-center">
                     {row.label}
                   </div>
                   {items.map((p) => (
@@ -135,7 +136,7 @@ export function CompareDrawer() {
                       {String(p[row.key] ?? "—")}
                     </div>
                   ))}
-                </>
+                </Fragment>
               ))}
 
               <div className="py-3 text-xs text-ink-soft uppercase tracking-wider self-center">
