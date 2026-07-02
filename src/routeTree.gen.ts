@@ -17,6 +17,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as OrderIdRouteImport } from './routes/order.$id'
 
 const WarrantyRoute = WarrantyRouteImport.update({
   id: '/warranty',
@@ -58,6 +59,11 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderIdRoute = OrderIdRouteImport.update({
+  id: '/order/$id',
+  path: '/order/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/warranty': typeof WarrantyRoute
+  '/order/$id': typeof OrderIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/warranty': typeof WarrantyRoute
+  '/order/$id': typeof OrderIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/warranty': typeof WarrantyRoute
+  '/order/$id': typeof OrderIdRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/shop'
     | '/warranty'
+    | '/order/$id'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/shop'
     | '/warranty'
+    | '/order/$id'
     | '/product/$id'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/shop'
     | '/warranty'
+    | '/order/$id'
     | '/product/$id'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRoute
   ShopRoute: typeof ShopRoute
   WarrantyRoute: typeof WarrantyRoute
+  OrderIdRoute: typeof OrderIdRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order/$id': {
+      id: '/order/$id'
+      path: '/order/$id'
+      fullPath: '/order/$id'
+      preLoaderRoute: typeof OrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRoute,
   ShopRoute: ShopRoute,
   WarrantyRoute: WarrantyRoute,
+  OrderIdRoute: OrderIdRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
