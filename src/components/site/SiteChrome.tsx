@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import { Nav } from "./Nav";
 import { Footer } from "./Footer";
 import { BackToTop } from "./BackToTop";
+import { CartDrawer } from "./CartDrawer";
+import { WishlistDrawer } from "./WishlistDrawer";
+import { CompareBar, CompareDrawer } from "./CompareTray";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +13,10 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <main className="flex-1 pt-16">{children}</main>
       <Footer />
       <BackToTop />
+      <CartDrawer />
+      <WishlistDrawer />
+      <CompareBar />
+      <CompareDrawer />
       <a
         href="https://wa.me/919999999999"
         target="_blank"
