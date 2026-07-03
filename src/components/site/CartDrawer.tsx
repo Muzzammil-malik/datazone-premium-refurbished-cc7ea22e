@@ -1,21 +1,25 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { cart, cartTotals, drawers, useStore, useUI } from "@/lib/store";
+import { cart, drawers, useStore, useUI } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, MessageCircle } from "lucide-react";
+import { cartInquiryUrl } from "@/lib/whatsapp";
 
 export function CartDrawer() {
   const open = useUI((u) => u.cartOpen);
   const items = useStore((s) => s.cart);
-  const navigate = useNavigate();
-  const totals = cartTotals(items, getProduct);
+  const count = items.reduce((n, i) => n + i.qty, 0);
+  const subtotal = items.reduce((n, i) => {
+    const p = getProduct(i.id);
+    return n + (p ? p.price * i.qty : 0);
+  }, 0);
 
   return (
     <Sheet open={open} onOpenChange={(v) => (v ? drawers.openCart() : drawers.closeCart())}>
       <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className="p-6 border-b border-hairline">
           <SheetTitle className="flex items-center gap-2 text-base">
-            <ShoppingBag className="size-4" strokeWidth={1.5} /> Your bag ({totals.count})
+            <ShoppingBag className="size-4" strokeWidth={1.5} /> Your bag ({count})
           </SheetTitle>
         </SheetHeader>
 
@@ -84,26 +88,21 @@ export function CartDrawer() {
 
         {items.length > 0 && (
           <div className="border-t border-hairline p-6 space-y-4 bg-background">
-            <div className="space-y-1.5 text-sm">
-              <Row label="Subtotal" value={inr(totals.subtotal)} />
-              <Row label="Shipping" value={totals.shipping === 0 ? "Free" : inr(totals.shipping)} />
-              <Row label="GST (18%)" value={inr(totals.tax)} />
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-ink-soft">Estimated subtotal</span>
+              <span className="text-lg font-semibold">{inr(subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-hairline">
-              <span className="text-sm text-ink-soft">Total</span>
-              <span className="text-lg font-semibold">{inr(totals.total)}</span>
-            </div>
-            <button
-              onClick={() => {
-                drawers.closeCart();
-                navigate({ to: "/checkout" });
-              }}
+            <a
+              href={cartInquiryUrl(items, getProduct)}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => drawers.closeCart()}
               className="w-full rounded-full bg-foreground text-background py-3.5 text-sm font-medium hover:opacity-90 transition inline-flex items-center justify-center gap-2"
             >
-              Checkout <ArrowRight className="size-4" />
-            </button>
+              <MessageCircle className="size-4" strokeWidth={1.75} /> Order on WhatsApp
+            </a>
             <p className="text-[11px] text-ink-soft text-center">
-              Free shipping on orders above {inr(50000)}
+              We consult every order personally on WhatsApp — no online payments or delivery.
             </p>
           </div>
         )}
@@ -112,11 +111,5 @@ export function CartDrawer() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-ink-soft">{label}</span>
-      <span>{value}</span>
-    </div>
-  );
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _keepArrowRight = ArrowRight;
