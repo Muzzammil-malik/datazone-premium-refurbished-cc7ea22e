@@ -59,16 +59,18 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             loading="lazy"
             className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-105"
           />
-          <a
-            href={productInquiryUrl(product)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
             aria-label="Order on WhatsApp"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(productInquiryUrl(product), "_blank", "noopener,noreferrer");
+            }}
             className="absolute bottom-3 inset-x-3 z-10 rounded-full bg-foreground text-background text-xs py-2.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition inline-flex items-center justify-center gap-1.5"
           >
             <MessageCircle className="size-3.5" /> Order on WhatsApp
-          </a>
+          </button>
         </div>
         <div className="mt-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
