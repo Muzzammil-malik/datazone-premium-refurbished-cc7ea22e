@@ -1,48 +1,30 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { cart, cartTotals, useStore } from "@/lib/store";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useStore } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
-import { ArrowRight, Lock, ShoppingBag } from "lucide-react";
+import { ArrowRight, MessageCircle, ShoppingBag } from "lucide-react";
+import { cartInquiryUrl } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
-      { title: "Checkout — DATAZONe" },
-      { name: "description", content: "Secure checkout for your DATAZONe order." },
+      { title: "Order on WhatsApp — DATAZONe" },
+      {
+        name: "description",
+        content:
+          "DATAZONe orders are confirmed personally on WhatsApp — no online payments, no delivery. Chat with us to finalise your device.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: Checkout,
+  component: WhatsAppHandoff,
 });
 
-type Form = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  payment: "card" | "upi" | "cod";
-};
-
-function Checkout() {
+function WhatsAppHandoff() {
   const items = useStore((s) => s.cart);
-  const totals = cartTotals(items, getProduct);
-  const navigate = useNavigate();
-  const [form, setForm] = useState<Form>({
-    email: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    payment: "card",
-  });
-  const [submitting, setSubmitting] = useState(false);
+  const subtotal = items.reduce((n, it) => {
+    const p = getProduct(it.id);
+    return n + (p ? p.price * it.qty : 0);
+  }, 0);
 
   if (items.length === 0) {
     return (
@@ -51,7 +33,9 @@ function Checkout() {
           <ShoppingBag className="size-6" strokeWidth={1.5} />
         </div>
         <h1 className="display-lg mt-6">Your bag is empty.</h1>
-        <p className="mt-3 text-ink-soft">Add something you love, then check out.</p>
+        <p className="mt-3 text-ink-soft">
+          Add something you love, then continue on WhatsApp.
+        </p>
         <Link
           to="/shop"
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-6 py-3 text-sm"
@@ -62,172 +46,79 @@ function Checkout() {
     );
   }
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    const orderId = `DZ-${Date.now().toString(36).toUpperCase()}`;
-    const order = {
-      id: orderId,
-      createdAt: new Date().toISOString(),
-      items: items.map((it) => {
-        const p = getProduct(it.id)!;
-        return { id: p.id, name: p.name, brand: p.brand, price: p.price, image: p.image, qty: it.qty };
-      }),
-      totals,
-      customer: form,
-    };
-    try {
-      const key = `datazone.orders`;
-      const raw = localStorage.getItem(key);
-      const list = raw ? JSON.parse(raw) : {};
-      list[orderId] = order;
-      localStorage.setItem(key, JSON.stringify(list));
-    } catch {}
-    setTimeout(() => {
-      cart.clear();
-      navigate({ to: "/order/$id", params: { id: orderId } });
-    }, 700);
-  };
-
-  const upd = <K extends keyof Form>(k: K) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
-
   return (
     <div className="container-dz py-12 md:py-16">
       <div className="max-w-2xl">
-        <div className="eyebrow">Checkout</div>
-        <h1 className="display-lg mt-3">Almost yours.</h1>
+        <div className="eyebrow">Order</div>
+        <h1 className="display-lg mt-3">One tap. Real humans.</h1>
+        <p className="mt-4 text-ink-soft max-w-lg">
+          DATAZONe doesn't do online payments or delivery — every order is
+          consulted personally on WhatsApp so we can match you with the exact
+          right device.
+        </p>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-12 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-10">
-          <Section title="Contact">
-            <Field label="Email" value={form.email} onChange={upd("email")} type="email" required />
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="First name" value={form.firstName} onChange={upd("firstName")} required />
-              <Field label="Last name" value={form.lastName} onChange={upd("lastName")} required />
-            </div>
-            <Field label="Phone" value={form.phone} onChange={upd("phone")} type="tel" required />
-          </Section>
-
-          <Section title="Shipping address">
-            <Field label="Street address" value={form.address} onChange={upd("address")} required />
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="City" value={form.city} onChange={upd("city")} required />
-              <Field label="State" value={form.state} onChange={upd("state")} required />
-            </div>
-            <Field label="PIN code" value={form.pincode} onChange={upd("pincode")} required />
-          </Section>
-
-          <Section title="Payment method">
-            <div className="grid gap-2">
-              {(["card", "upi", "cod"] as const).map((m) => (
-                <label
-                  key={m}
-                  className={`flex items-center gap-3 hairline rounded-2xl p-4 cursor-pointer transition ${
-                    form.payment === m ? "border-foreground bg-surface" : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={m}
-                    checked={form.payment === m}
-                    onChange={() => setForm((f) => ({ ...f, payment: m }))}
-                    className="accent-foreground"
-                  />
-                  <span className="text-sm font-medium capitalize">
-                    {m === "card" ? "Credit / Debit card" : m === "upi" ? "UPI" : "Cash on delivery"}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-soft">
-              <Lock className="size-3" /> Encrypted checkout · demo mode
-            </p>
-          </Section>
+      <div className="mt-12 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
+        <div className="hairline rounded-3xl p-6 bg-surface">
+          <div className="text-sm font-semibold">Your selection</div>
+          <ul className="mt-4 divide-y divide-hairline">
+            {items.map((it) => {
+              const p = getProduct(it.id);
+              if (!p) return null;
+              return (
+                <li key={it.id} className="py-4 flex gap-4 items-center">
+                  <div className="relative size-16 rounded-xl bg-background hairline overflow-hidden shrink-0">
+                    <img
+                      src={p.image}
+                      alt=""
+                      className="h-full w-full object-contain p-1.5"
+                    />
+                    <span className="absolute -top-1 -right-1 size-5 rounded-full bg-foreground text-background text-[10px] grid place-items-center">
+                      {it.qty}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate font-medium">{p.name}</div>
+                    <div className="text-[11px] text-ink-soft">{p.brand}</div>
+                  </div>
+                  <div className="text-sm font-medium">
+                    {inr(p.price * it.qty)}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-6 pt-6 border-t border-hairline flex items-center justify-between">
+            <span className="text-sm text-ink-soft">Estimated subtotal</span>
+            <span className="text-lg font-semibold">{inr(subtotal)}</span>
+          </div>
         </div>
 
         <aside className="lg:sticky lg:top-24 self-start">
-          <div className="hairline rounded-3xl p-6 bg-surface">
-            <div className="text-sm font-semibold">Order summary</div>
-            <ul className="mt-4 space-y-3 max-h-64 overflow-y-auto pr-2">
-              {items.map((it) => {
-                const p = getProduct(it.id);
-                if (!p) return null;
-                return (
-                  <li key={it.id} className="flex gap-3 items-center">
-                    <div className="relative size-14 rounded-xl bg-background hairline overflow-hidden shrink-0">
-                      <img src={p.image} alt="" className="h-full w-full object-contain p-1.5" />
-                      <span className="absolute -top-1 -right-1 size-5 rounded-full bg-foreground text-background text-[10px] grid place-items-center">
-                        {it.qty}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs truncate font-medium">{p.name}</div>
-                      <div className="text-[11px] text-ink-soft">{p.brand}</div>
-                    </div>
-                    <div className="text-xs font-medium">{inr(p.price * it.qty)}</div>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="mt-5 pt-5 border-t border-hairline space-y-1.5 text-sm">
-              <Row label="Subtotal" value={inr(totals.subtotal)} />
-              <Row label="Shipping" value={totals.shipping === 0 ? "Free" : inr(totals.shipping)} />
-              <Row label="GST (18%)" value={inr(totals.tax)} />
-            </div>
-            <div className="mt-4 pt-4 border-t border-hairline flex items-center justify-between">
-              <span className="text-sm">Total</span>
-              <span className="text-lg font-semibold">{inr(totals.total)}</span>
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-6 w-full rounded-full bg-foreground text-background py-3.5 text-sm font-medium hover:opacity-90 transition inline-flex items-center justify-center gap-2 disabled:opacity-60"
+          <div className="hairline rounded-3xl p-6">
+            <div className="text-sm font-semibold">Continue on WhatsApp</div>
+            <p className="mt-2 text-xs text-ink-soft">
+              We'll open a chat with your selection pre-filled. Confirm the
+              device, availability, and store pickup — no payment collected
+              online.
+            </p>
+            <a
+              href={cartInquiryUrl(items, getProduct)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 w-full rounded-full bg-foreground text-background py-3.5 text-sm font-medium hover:opacity-90 transition inline-flex items-center justify-center gap-2"
             >
-              {submitting ? "Placing order…" : (
-                <>
-                  Place order · {inr(totals.total)} <ArrowRight className="size-4" />
-                </>
-              )}
-            </button>
+              <MessageCircle className="size-4" strokeWidth={1.75} /> Order on WhatsApp
+            </a>
+            <Link
+              to="/shop"
+              className="mt-3 w-full rounded-full hairline py-3 text-sm inline-flex items-center justify-center gap-2 hover:bg-surface transition"
+            >
+              Keep browsing
+            </Link>
           </div>
         </aside>
-      </form>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-sm font-semibold mb-4">{title}</div>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  return (
-    <label className="block">
-      <span className="text-[11px] uppercase tracking-wider text-ink-soft">{label}</span>
-      <input
-        {...props}
-        className="mt-1.5 w-full hairline rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:border-foreground transition"
-      />
-    </label>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-ink-soft">{label}</span>
-      <span>{value}</span>
+      </div>
     </div>
   );
 }

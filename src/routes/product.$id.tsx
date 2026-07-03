@@ -1,10 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { getProduct, inr, products } from "@/lib/products";
-import { ShieldCheck, Truck, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare } from "lucide-react";
+import { ShieldCheck, Store, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare, MessageCircle } from "lucide-react";
 import { ProductCard } from "@/components/site/ProductCard";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
-import { cart, compare, drawers, recent, useStore, wishlist } from "@/lib/store";
+import { compare, recent, useStore, wishlist } from "@/lib/store";
+import { productInquiryUrl } from "@/lib/whatsapp";
 import { RecentlyViewed } from "@/components/site/RecentlyViewed";
 
 export const Route = createFileRoute("/product/$id")({
@@ -98,15 +99,14 @@ function ProductPage() {
           </div>
 
           <div className="mt-8 flex gap-3">
-            <button
-              onClick={() => {
-                cart.add(p.id);
-                drawers.openCart();
-              }}
-              className="flex-1 rounded-full bg-foreground text-background py-4 text-sm font-medium hover:opacity-90 transition"
+            <a
+              href={productInquiryUrl(p)}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 rounded-full bg-foreground text-background py-4 text-sm font-medium hover:opacity-90 transition inline-flex items-center justify-center gap-2"
             >
-              Add to cart
-            </button>
+              <MessageCircle className="size-4" strokeWidth={1.75} /> Order on WhatsApp
+            </a>
             <button
               aria-label="Wishlist"
               onClick={() => wishlist.toggle(p.id)}
@@ -128,7 +128,7 @@ function ProductPage() {
           </div>
 
           <div className="mt-8 grid grid-cols-3 gap-3 text-xs">
-            {[{ i: ShieldCheck, l: "1-Year Warranty" }, { i: PackageCheck, l: "100-pt Inspected" }, { i: Truck, l: "Free Shipping" }].map(({ i: I, l }) => (
+            {[{ i: ShieldCheck, l: "1-Year Warranty" }, { i: PackageCheck, l: "100-pt Inspected" }, { i: Store, l: "In-store Pickup" }].map(({ i: I, l }) => (
               <div key={l} className="hairline rounded-2xl p-3 flex flex-col items-center text-center gap-2">
                 <I className="size-4" strokeWidth={1.5} />
                 <span className="text-ink-soft">{l}</span>
