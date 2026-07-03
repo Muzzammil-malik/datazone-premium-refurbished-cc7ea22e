@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { cart, drawers, useStore, useUI, wishlist } from "@/lib/store";
+import { drawers, useStore, useUI, wishlist } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
-import { Heart, Trash2, ShoppingBag } from "lucide-react";
+import { Heart, Trash2, MessageCircle } from "lucide-react";
+import { productInquiryUrl } from "@/lib/whatsapp";
 
 export function WishlistDrawer() {
   const open = useUI((u) => u.wishlistOpen);
@@ -52,17 +53,15 @@ export function WishlistDrawer() {
                       </Link>
                       <div className="mt-1 text-xs text-ink-soft">{inr(p.price)}</div>
                       <div className="mt-3 flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            cart.add(id);
-                            wishlist.remove(id);
-                            drawers.closeWishlist();
-                            drawers.openCart();
-                          }}
+                        <a
+                          href={productInquiryUrl(p)}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => drawers.closeWishlist()}
                           className="inline-flex items-center gap-1.5 rounded-full bg-foreground text-background px-3 py-1.5 text-xs"
                         >
-                          <ShoppingBag className="size-3" /> Move to bag
-                        </button>
+                          <MessageCircle className="size-3" /> Order on WhatsApp
+                        </a>
                         <button
                           aria-label="Remove"
                           className="text-ink-soft hover:text-foreground p-1.5"
