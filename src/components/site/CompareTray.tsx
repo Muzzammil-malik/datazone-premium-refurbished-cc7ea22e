@@ -1,7 +1,8 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { compare, drawers, useStore, useUI, cart } from "@/lib/store";
+import { compare, drawers, useStore, useUI } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
-import { GitCompare, X, ShoppingBag } from "lucide-react";
+import { GitCompare, X, MessageCircle } from "lucide-react";
+import { productInquiryUrl } from "@/lib/whatsapp";
 import { AnimatePresence, motion } from "framer-motion";
 import { Fragment } from "react";
 
@@ -103,16 +104,15 @@ export function CompareDrawer() {
                   <div className="mt-3 text-sm font-medium line-clamp-2">{p.name}</div>
                   <div className="mt-1 text-base font-semibold">{inr(p.price)}</div>
                   <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => {
-                        cart.add(p.id);
-                        drawers.closeCompare();
-                        drawers.openCart();
-                      }}
+                    <a
+                      href={productInquiryUrl(p)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => drawers.closeCompare()}
                       className="flex-1 rounded-full bg-foreground text-background text-xs py-2 inline-flex items-center justify-center gap-1"
                     >
-                      <ShoppingBag className="size-3" /> Add
-                    </button>
+                      <MessageCircle className="size-3" /> Order
+                    </a>
                     <button
                       onClick={() => compare.remove(p.id)}
                       className="rounded-full hairline text-xs px-3 py-2"
