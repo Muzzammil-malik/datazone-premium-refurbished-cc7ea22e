@@ -110,6 +110,3 @@ export function CartDrawer() {
     </Sheet>
   );
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _keepArrowRight = ArrowRight;
