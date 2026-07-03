@@ -1,8 +1,9 @@
-import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { inr, type Product } from "@/lib/products";
-import { Heart, GitCompare, ShoppingBag } from "lucide-react";
-import { cart, compare, useStore, wishlist, drawers } from "@/lib/store";
+import { Link } from "@tanstack/react-router";
+import { Heart, GitCompare, MessageCircle } from "lucide-react";
+import { compare, useStore, wishlist } from "@/lib/store";
+import { productInquiryUrl } from "@/lib/whatsapp";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const off = Math.round(((product.original - product.price) / product.original) * 100);
@@ -58,18 +59,16 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             loading="lazy"
             className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-105"
           />
-          <button
-            type="button"
-            aria-label="Quick add to bag"
-            onClick={(e) => {
-              e.preventDefault();
-              cart.add(product.id);
-              drawers.openCart();
-            }}
+          <a
+            href={productInquiryUrl(product)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Order on WhatsApp"
+            onClick={(e) => e.stopPropagation()}
             className="absolute bottom-3 inset-x-3 z-10 rounded-full bg-foreground text-background text-xs py-2.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition inline-flex items-center justify-center gap-1.5"
           >
-            <ShoppingBag className="size-3.5" /> Quick add
-          </button>
+            <MessageCircle className="size-3.5" /> Order on WhatsApp
+          </a>
         </div>
         <div className="mt-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
