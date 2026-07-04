@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { Nav } from "./Nav";
 import { Footer } from "./Footer";
 import { BackToTop } from "./BackToTop";
@@ -7,6 +8,10 @@ import { WishlistDrawer } from "./WishlistDrawer";
 import { CompareBar, CompareDrawer } from "./CompareTray";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname.startsWith("/admin")) {
+    return <>{children}</>;
+  }
   return (
     <div className="min-h-dvh flex flex-col">
       <Nav />
