@@ -492,7 +492,7 @@ export function getAdminState() { return state; }
 async function pushActivity(a: Omit<Activity, "id" | "at">) {
   const row = { id: uid(), kind: a.kind, message: a.message, at: new Date().toISOString() };
   set({ activity: [{ id: row.id, ...a, at: row.at }, ...state.activity].slice(0, 30) });
-  await supabase.from("activity").insert(row);
+  await (supabase as any).from("activity").insert(row);
 }
 
 // ================ generic helpers ================
@@ -503,12 +503,12 @@ function reportError(err: any, action: string) {
 }
 
 async function upsertRow(table: string, row: Row, action: string) {
-  const { error } = await supabase.from(table).upsert(row);
+  const { error } = await (supabase as any).from(table).upsert(row);
   if (error) reportError(error, action);
   return !error;
 }
 async function deleteRow(table: string, id: string, action: string) {
-  const { error } = await supabase.from(table).delete().eq("id", id);
+  const { error } = await (supabase as any).from(table).delete().eq("id", id);
   if (error) reportError(error, action);
   return !error;
 }
