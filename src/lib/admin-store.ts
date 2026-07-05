@@ -440,17 +440,17 @@ async function hydrate() {
       const [
         p, c, b, inv, inq, s, rv, bn, hp, st, act,
       ] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("categories").select("*").order("order", { ascending: true }),
-        supabase.from("brands").select("*").order("name", { ascending: true }),
-        supabase.from("inventory").select("*").order("created_at", { ascending: false }),
-        supabase.from("inquiries").select("*").order("date", { ascending: false }),
-        supabase.from("services").select("*").order("order", { ascending: true }),
-        supabase.from("reviews").select("*").order("date", { ascending: false }),
-        supabase.from("banners").select("*").order("created_at", { ascending: false }),
-        supabase.from("homepage").select("*").eq("id", 1).maybeSingle(),
-        supabase.from("settings").select("*").eq("id", 1).maybeSingle(),
-        supabase.from("activity").select("*").order("at", { ascending: false }).limit(30),
+        (supabase as any).from("products").select("*").order("created_at", { ascending: false }),
+        (supabase as any).from("categories").select("*").order("order", { ascending: true }),
+        (supabase as any).from("brands").select("*").order("name", { ascending: true }),
+        (supabase as any).from("inventory").select("*").order("created_at", { ascending: false }),
+        (supabase as any).from("inquiries").select("*").order("date", { ascending: false }),
+        (supabase as any).from("services").select("*").order("order", { ascending: true }),
+        (supabase as any).from("reviews").select("*").order("date", { ascending: false }),
+        (supabase as any).from("banners").select("*").order("created_at", { ascending: false }),
+        (supabase as any).from("homepage").select("*").eq("id", 1).maybeSingle(),
+        (supabase as any).from("settings").select("*").eq("id", 1).maybeSingle(),
+        (supabase as any).from("activity").select("*").order("at", { ascending: false }).limit(30),
       ]);
       set({
         products: (p.data ?? []).map(rowToProduct),
