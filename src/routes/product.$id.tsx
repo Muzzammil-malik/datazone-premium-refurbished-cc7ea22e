@@ -1,5 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { getProduct, inr, products } from "@/lib/products";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { inr, useProduct, useProducts, type Product } from "@/lib/products";
 import { ShieldCheck, Store, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare, MessageCircle } from "lucide-react";
 import { ProductCard } from "@/components/site/ProductCard";
 import { motion } from "framer-motion";
@@ -9,18 +9,10 @@ import { productInquiryUrl } from "@/lib/whatsapp";
 import { RecentlyViewed } from "@/components/site/RecentlyViewed";
 
 export const Route = createFileRoute("/product/$id")({
-  loader: ({ params }) => {
-    const p = getProduct(params.id);
-    if (!p) throw notFound();
-    return p;
-  },
-  head: ({ loaderData }) => ({
+  head: ({ params }) => ({
     meta: [
-      { title: `${loaderData?.name ?? "Product"} — DATAZONe` },
-      { name: "description", content: loaderData?.tagline ?? "Refurbished device" },
-      { property: "og:title", content: `${loaderData?.name ?? "Product"} — DATAZONe` },
-      { property: "og:description", content: loaderData?.tagline ?? "Refurbished device" },
-      { property: "og:image", content: loaderData?.image ?? "" },
+      { title: `Product ${params.id} — DATAZONe` },
+      { name: "description", content: "Certified refurbished device from DATAZONe." },
     ],
   }),
   component: ProductPage,
@@ -37,15 +29,22 @@ export const Route = createFileRoute("/product/$id")({
 });
 
 function ProductPage() {
-  const p = Route.useLoaderData();
-  const related = products.filter((x) => x.id !== p.id && x.category === p.category).slice(0, 4);
+  const { id } = Route.useParams();
+  const p = useProduct(id);
+  const products = useProducts();
+  const wished = useStore((s) => (p ? s.wishlist.includes(p.id) : false));
+  const compared = useStore((s) => (p ? s.compare.includes(p.id) : false));
+  useEffect(() => { if (p) recent.push(p.id); }, [p?.id]);
+  if (!p) {
+    return (
+      <div className="container-dz py-40 text-center">
+        <div className="eyebrow">Loading</div>
+        <h1 className="display-lg mt-3">Fetching product…</h1>
+      </div>
+    );
+  }
+  const related = products.filter((x: Product) => x.id !== p.id && x.category === p.category).slice(0, 4);
   const off = Math.round(((p.original - p.price) / p.original) * 100);
-  const wished = useStore((s) => s.wishlist.includes(p.id));
-  const compared = useStore((s) => s.compare.includes(p.id));
-
-  useEffect(() => {
-    recent.push(p.id);
-  }, [p.id]);
 
   return (
     <div className="pb-24">
@@ -166,7 +165,7 @@ function ProductPage() {
             <Link to="/shop" className="text-sm inline-flex items-center gap-1.5">View all <ArrowRight className="size-4" /></Link>
           </div>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {related.map((r, i) => <ProductCard key={r.id} product={r} index={i} />)}
+            {related.map((r: Product, i: number) => <ProductCard key={r.id} product={r} index={i} />)}
           </div>
         </div>
       )}

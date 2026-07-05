@@ -6,7 +6,7 @@ import { ArrowRight, ShieldCheck, Cpu, Truck, Sparkles, Star, PackageCheck, Recy
 import heroLaptop from "@/assets/hero-laptop.jpg";
 import heroDesktop from "@/assets/hero-desktop.jpg";
 import refurb from "@/assets/refurb-process.jpg";
-import { products } from "@/lib/products";
+import { useProducts } from "@/lib/products";
 import { ProductCard } from "@/components/site/ProductCard";
 import { BrandMarquee } from "@/components/site/Marquee";
 import { Reveal } from "@/components/site/Reveal";
@@ -183,7 +183,7 @@ function WhyDatazone() {
 }
 
 function FeaturedProducts() {
-  const featured = products.slice(0, 4);
+  const featured = useProducts().slice(0, 4);
   return (
     <section className="container-dz mt-28 md:mt-40">
       <div className="flex items-end justify-between gap-6 flex-wrap">

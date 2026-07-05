@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/site/ProductCard";
-import { products, inr, type Product } from "@/lib/products";
+import { useProducts, inr, type Product } from "@/lib/products";
 import { SlidersHorizontal, Search, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,10 +18,12 @@ export const Route = createFileRoute("/shop")({
 });
 
 function Shop() {
+  const products = useProducts();
   const priceBounds = useMemo(() => {
     const prices = products.map((p) => p.price);
+    if (!prices.length) return { min: 0, max: 200000 };
     return { min: Math.min(...prices), max: Math.max(...prices) };
-  }, []);
+  }, [products]);
 
   const [q, setQ] = useState("");
   const [brands, setBrands] = useState<string[]>([]);
@@ -33,16 +35,16 @@ function Shop() {
   const [sort, setSort] = useState<"featured" | "low" | "high" | "rating">("featured");
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const allBrands = useMemo(() => Array.from(new Set(products.map((p) => p.brand))).sort(), []);
-  const allCats = useMemo(() => Array.from(new Set(products.map((p) => p.category))), []);
-  const allConditions = useMemo(() => Array.from(new Set(products.map((p) => p.condition))).sort(), []);
-  const allRam = useMemo(
-    () => Array.from(new Set(products.map((p) => p.ram).filter((r) => r && r !== "—"))).sort(),
-    [],
+  const allBrands = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.brand))).sort(), [products]);
+  const allCats = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.category))), [products]);
+  const allConditions = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.condition))).sort(), [products]);
+  const allRam = useMemo<string[]>(
+    () => Array.from(new Set(products.map((p) => p.ram).filter((r: string) => r && r !== "—"))).sort(),
+    [products],
   );
 
   const filtered = useMemo(() => {
-    let list = products.filter((p) => {
+    let list = products.filter((p: Product) => {
       if (brands.length && !brands.includes(p.brand)) return false;
       if (cats.length && !cats.includes(p.category)) return false;
       if (conditions.length && !conditions.includes(p.condition)) return false;
@@ -56,7 +58,7 @@ function Shop() {
     if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);
     if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [q, brands, cats, conditions, ramSel, inStockOnly, maxPrice, sort]);
+  }, [products, q, brands, cats, conditions, ramSel, inStockOnly, maxPrice, sort]);
 
   const activeCount =
     brands.length +
