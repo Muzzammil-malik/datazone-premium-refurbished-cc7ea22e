@@ -32,6 +32,9 @@ function ProductPage() {
   const { id } = Route.useParams();
   const p = useProduct(id);
   const products = useProducts();
+  const wished = useStore((s) => (p ? s.wishlist.includes(p.id) : false));
+  const compared = useStore((s) => (p ? s.compare.includes(p.id) : false));
+  useEffect(() => { if (p) recent.push(p.id); }, [p?.id]);
   if (!p) {
     return (
       <div className="container-dz py-40 text-center">
@@ -42,12 +45,6 @@ function ProductPage() {
   }
   const related = products.filter((x: Product) => x.id !== p.id && x.category === p.category).slice(0, 4);
   const off = Math.round(((p.original - p.price) / p.original) * 100);
-  const wished = useStore((s) => s.wishlist.includes(p.id));
-  const compared = useStore((s) => s.compare.includes(p.id));
-
-  useEffect(() => {
-    recent.push(p.id);
-  }, [p.id]);
 
   return (
     <div className="pb-24">
