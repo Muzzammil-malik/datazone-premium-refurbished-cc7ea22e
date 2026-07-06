@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { inr, type Product } from "@/lib/products";
 import { Link } from "@tanstack/react-router";
-import { Heart, GitCompare, MessageCircle } from "lucide-react";
-import { compare, useStore, wishlist } from "@/lib/store";
+import { Heart, GitCompare, MessageCircle, ShoppingBag, Check } from "lucide-react";
+import { cart, compare, useStore, wishlist } from "@/lib/store";
 import { productInquiryUrl } from "@/lib/whatsapp";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
@@ -10,6 +10,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   const wished = useStore((s) => s.wishlist.includes(product.id));
   const compared = useStore((s) => s.compare.includes(product.id));
   const compareFull = useStore((s) => s.compare.length >= 4 && !s.compare.includes(product.id));
+  const inCart = useStore((s) => s.cart.some((c) => c.id === product.id));
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -25,6 +26,19 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             {off > 0 && <span className="text-[10px] px-2 py-1 rounded-full bg-foreground text-background tracking-wider">−{off}%</span>}
           </div>
           <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition">
+            <button
+              type="button"
+              aria-label={inCart ? "In bag" : "Add to bag"}
+              onClick={(e) => {
+                e.preventDefault();
+                cart.add(product.id);
+              }}
+              className={`grid place-items-center size-9 rounded-full backdrop-blur hairline transition ${
+                inCart ? "bg-foreground text-background" : "bg-background/80"
+              }`}
+            >
+              {inCart ? <Check className="size-4" strokeWidth={2} /> : <ShoppingBag className="size-4" strokeWidth={1.5} />}
+            </button>
             <button
               type="button"
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
