@@ -1,7 +1,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { compare, drawers, useStore, useUI } from "@/lib/store";
 import { getProduct, inr, useProducts } from "@/lib/products";
-import { GitCompare, X, MessageCircle, Check, Minus, ShoppingBag } from "lucide-react";
+import { GitCompare, X, MessageCircle, Check, ShoppingBag } from "lucide-react";
 import { productInquiryUrl } from "@/lib/whatsapp";
 import { cart } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
