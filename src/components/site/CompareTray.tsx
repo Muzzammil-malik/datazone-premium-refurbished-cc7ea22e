@@ -1,13 +1,15 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { compare, drawers, useStore, useUI } from "@/lib/store";
-import { getProduct, inr } from "@/lib/products";
-import { GitCompare, X, MessageCircle } from "lucide-react";
+import { getProduct, inr, useProducts } from "@/lib/products";
+import { GitCompare, X, MessageCircle, Check, Minus, ShoppingBag } from "lucide-react";
 import { productInquiryUrl } from "@/lib/whatsapp";
+import { cart } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
 import { Fragment } from "react";
 
 export function CompareBar() {
   const ids = useStore((s) => s.compare);
+  useProducts();
   return (
     <AnimatePresence>
       {ids.length > 0 && (
