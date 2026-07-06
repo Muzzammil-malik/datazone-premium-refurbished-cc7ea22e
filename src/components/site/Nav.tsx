@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Search, ShoppingBag, Heart, Menu, X, GitCompare } from "lucide-react";
 import { drawers, useStore } from "@/lib/store";
-import { useAdmin } from "@/lib/admin-store";
 
 const links = [
   { to: "/", label: "Home" },
@@ -14,7 +13,6 @@ const links = [
 ] as const;
 
 export function Nav() {
-  const storeName = useAdmin((s) => s.settings.storeName || "DATAZONe");
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const cartCount = useStore((s) => s.cart.reduce((n, c) => n + c.qty, 0));
@@ -38,14 +36,7 @@ export function Nav() {
       <div className="container-dz flex h-16 items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-2 group">
           <span className="text-[1.15rem] font-bold tracking-tight">
-            {storeName.length > 1 ? (
-              <>
-                {storeName.slice(0, -1)}
-                <span className="text-[color:var(--accent-blue)]">{storeName.slice(-1)}</span>
-              </>
-            ) : (
-              storeName
-            )}
+            DATAZON<span className="text-[color:var(--accent-blue)]">e</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-8">

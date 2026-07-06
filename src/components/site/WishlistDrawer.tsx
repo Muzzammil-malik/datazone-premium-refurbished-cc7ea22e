@@ -1,14 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { drawers, useStore, useUI, wishlist } from "@/lib/store";
-import { getProduct, inr, useProducts } from "@/lib/products";
+import { getProduct, inr } from "@/lib/products";
 import { Heart, Trash2, MessageCircle } from "lucide-react";
 import { productInquiryUrl } from "@/lib/whatsapp";
 
 export function WishlistDrawer() {
   const open = useUI((u) => u.wishlistOpen);
   const ids = useStore((s) => s.wishlist);
-  useProducts();
 
   return (
     <Sheet open={open} onOpenChange={(v) => (v ? drawers.openWishlist() : drawers.closeWishlist())}>
