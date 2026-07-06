@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { inr, useProduct, useProducts, type Product } from "@/lib/products";
-import { ShieldCheck, Store, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare, MessageCircle } from "lucide-react";
+import { ShieldCheck, Store, PackageCheck, Star, ArrowRight, Heart, Check, GitCompare, MessageCircle, ShoppingBag } from "lucide-react";
 import { ProductCard } from "@/components/site/ProductCard";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
-import { compare, recent, useStore, wishlist } from "@/lib/store";
+import { cart, compare, drawers, recent, useStore, wishlist } from "@/lib/store";
 import { productInquiryUrl } from "@/lib/whatsapp";
 import { RecentlyViewed } from "@/components/site/RecentlyViewed";
 
@@ -34,6 +34,7 @@ function ProductPage() {
   const products = useProducts();
   const wished = useStore((s) => (p ? s.wishlist.includes(p.id) : false));
   const compared = useStore((s) => (p ? s.compare.includes(p.id) : false));
+  const inCart = useStore((s) => (p ? s.cart.some((c) => c.id === p.id) : false));
   useEffect(() => { if (p) recent.push(p.id); }, [p?.id]);
   if (!p) {
     return (
@@ -98,6 +99,18 @@ function ProductPage() {
           </div>
 
           <div className="mt-8 flex gap-3">
+            <button
+              onClick={() => {
+                cart.add(p.id);
+                drawers.openCart();
+              }}
+              className={`grid place-items-center size-[52px] rounded-full hairline transition ${
+                inCart ? "bg-foreground text-background border-foreground" : "hover:border-foreground"
+              }`}
+              aria-label={inCart ? "In bag" : "Add to bag"}
+            >
+              {inCart ? <Check className="size-4" strokeWidth={2} /> : <ShoppingBag className="size-4" strokeWidth={1.5} />}
+            </button>
             <a
               href={productInquiryUrl(p)}
               target="_blank"
