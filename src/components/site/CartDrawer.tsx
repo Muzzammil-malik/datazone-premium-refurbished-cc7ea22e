@@ -1,13 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cart, drawers, useStore, useUI } from "@/lib/store";
-import { getProduct, inr } from "@/lib/products";
+import { getProduct, inr, useProducts } from "@/lib/products";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, MessageCircle } from "lucide-react";
 import { cartInquiryUrl } from "@/lib/whatsapp";
 
 export function CartDrawer() {
   const open = useUI((u) => u.cartOpen);
   const items = useStore((s) => s.cart);
+  useProducts(); // subscribe so drawer updates when products hydrate/change
   const count = items.reduce((n, i) => n + i.qty, 0);
   const subtotal = items.reduce((n, i) => {
     const p = getProduct(i.id);
