@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Wrench, HardDrive, MemoryStick, Monitor, ShieldAlert, Database, Bug, Building2, Package, Cpu, ArrowUpRight } from "lucide-react";
+import {
+  Wrench, HardDrive, MemoryStick, Monitor, ShieldAlert, Database, Bug, Building2, Package, Cpu,
+  ArrowUpRight, Laptop, Smartphone, ShieldCheck, Headphones, Cog, Zap,
+} from "lucide-react";
 import { Reveal } from "@/components/site/Reveal";
+import { useAdmin } from "@/lib/admin-store";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -14,7 +18,12 @@ export const Route = createFileRoute("/services")({
   component: Services,
 });
 
-const services = [
+const ICONS: Record<string, any> = {
+  Wrench, HardDrive, MemoryStick, Monitor, ShieldAlert, Database, Bug, Building2, Package, Cpu,
+  Laptop, Smartphone, ShieldCheck, Headphones, Cog, Zap,
+};
+
+const defaultServices = [
   { icon: Monitor, title: "Computer Repair", body: "Diagnostics and fixes for desktops of every brand." },
   { icon: Wrench, title: "Laptop Repair", body: "Board-level repair, screen and keyboard replacement." },
   { icon: MemoryStick, title: "RAM Upgrade", body: "Speed up your machine with expert-installed memory." },
@@ -28,6 +37,17 @@ const services = [
 ];
 
 function Services() {
+  const dbServices = useAdmin((s) => s.services);
+  const services =
+    dbServices.length > 0
+      ? [...dbServices]
+          .sort((a, b) => a.order - b.order)
+          .map((s) => ({
+            icon: ICONS[s.icon] ?? Wrench,
+            title: s.title,
+            body: s.description,
+          }))
+      : defaultServices;
   return (
     <div className="container-dz py-16 md:py-24">
       <div className="max-w-3xl">

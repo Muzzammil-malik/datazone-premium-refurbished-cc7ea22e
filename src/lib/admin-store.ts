@@ -476,6 +476,67 @@ async function hydrate() {
 // Kick off hydration once, in the browser only.
 if (typeof window !== "undefined") {
   hydrate();
+  setupRealtime();
+}
+
+// ================ realtime ================
+let realtimeChannel: any = null;
+function setupRealtime() {
+  if (realtimeChannel || typeof window === "undefined") return;
+  const refetchers: Record<string, () => Promise<void>> = {
+    products: async () => {
+      const { data } = await (supabase as any).from("products").select("*").order("created_at", { ascending: false });
+      set({ products: (data ?? []).map(rowToProduct) });
+    },
+    categories: async () => {
+      const { data } = await (supabase as any).from("categories").select("*").order("order", { ascending: true });
+      set({ categories: (data ?? []).map(rowToCategory) });
+    },
+    brands: async () => {
+      const { data } = await (supabase as any).from("brands").select("*").order("name", { ascending: true });
+      set({ brands: (data ?? []).map(rowToBrand) });
+    },
+    inventory: async () => {
+      const { data } = await (supabase as any).from("inventory").select("*").order("created_at", { ascending: false });
+      set({ inventory: (data ?? []).map(rowToInventory) });
+    },
+    inquiries: async () => {
+      const { data } = await (supabase as any).from("inquiries").select("*").order("date", { ascending: false });
+      set({ inquiries: (data ?? []).map(rowToInquiry) });
+    },
+    services: async () => {
+      const { data } = await (supabase as any).from("services").select("*").order("order", { ascending: true });
+      set({ services: (data ?? []).map(rowToService) });
+    },
+    reviews: async () => {
+      const { data } = await (supabase as any).from("reviews").select("*").order("date", { ascending: false });
+      set({ reviews: (data ?? []).map(rowToReview) });
+    },
+    banners: async () => {
+      const { data } = await (supabase as any).from("banners").select("*").order("created_at", { ascending: false });
+      set({ banners: (data ?? []).map(rowToBanner) });
+    },
+    homepage: async () => {
+      const { data } = await (supabase as any).from("homepage").select("*").eq("id", 1).maybeSingle();
+      set({ homepage: data ? rowToHomepage(data) : defaultHomepage });
+    },
+    settings: async () => {
+      const { data } = await (supabase as any).from("settings").select("*").eq("id", 1).maybeSingle();
+      set({ settings: data ? rowToSettings(data) : defaultSettings });
+    },
+    activity: async () => {
+      const { data } = await (supabase as any).from("activity").select("*").order("at", { ascending: false }).limit(30);
+      set({ activity: (data ?? []).map(rowToActivity) });
+    },
+  };
+  const ch = (supabase as any).channel("datazone-admin-live");
+  for (const table of Object.keys(refetchers)) {
+    ch.on("postgres_changes", { event: "*", schema: "public", table }, () => {
+      refetchers[table]().catch((e) => console.warn(`[realtime] refetch ${table}`, e));
+    });
+  }
+  ch.subscribe();
+  realtimeChannel = ch;
 }
 
 export function useAdmin<T>(sel: (s: AdminState) => T): T {
