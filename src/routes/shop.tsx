@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/site/ProductCard";
 import { useProducts, inr, type Product } from "@/lib/products";
 import { SlidersHorizontal, Search, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FloatingAIBot } from "@/components/site/AIBot";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -38,17 +39,21 @@ function Shop() {
   const allBrands = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.brand))).sort(), [products]);
   const allCats = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.category))), [products]);
   const allConditions = useMemo<string[]>(() => Array.from(new Set(products.map((p) => p.condition))).sort(), [products]);
-  const allRam = useMemo<string[]>(
-    () => Array.from(new Set(products.map((p) => p.ram).filter((r: string) => r && r !== "—"))).sort(),
-    [products],
-  );
+  const allRam = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB"];
 
   const filtered = useMemo(() => {
     let list = products.filter((p: Product) => {
       if (brands.length && !brands.includes(p.brand)) return false;
       if (cats.length && !cats.includes(p.category)) return false;
       if (conditions.length && !conditions.includes(p.condition)) return false;
-      if (ramSel.length && !ramSel.includes(p.ram)) return false;
+      if (ramSel.length) {
+        const pRamMatch = ramSel.some((selectedRam) => {
+          const num = selectedRam.replace(/\s*GB/i, "").trim();
+          const regex = new RegExp(`\\b${num}\\s*GB\\b`, "i");
+          return regex.test(p.ram || "");
+        });
+        if (!pRamMatch) return false;
+      }
       if (inStockOnly && p.availability === "Out of stock") return false;
       if (p.price > maxPrice) return false;
       if (q && !`${p.name} ${p.brand} ${p.processor}`.toLowerCase().includes(q.toLowerCase())) return false;
@@ -232,6 +237,7 @@ function Shop() {
           </motion.div>
         )}
       </AnimatePresence>
+      <FloatingAIBot context={`Currently available products: ${products.slice(0, 15).map(p => `${p.name} - ₹${p.price} (${p.processor}, ${p.ram})`).join(", ")}`} />
     </div>
   );
 }
@@ -344,7 +350,7 @@ function FilterPanel(props: {
                     active ? "bg-foreground text-background" : "hairline hover:border-foreground"
                   }`}
                 >
-                  {r.replace(/\s*(DDR\d\w*|LPDDR\d\w*)/i, "").trim()}
+                  {r}
                 </button>
               );
             })}

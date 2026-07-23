@@ -1,10 +1,11 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { compare, drawers, useStore, useUI } from "@/lib/store";
 import { getProduct, inr } from "@/lib/products";
-import { GitCompare, X, MessageCircle } from "lucide-react";
+import { GitCompare, X, MessageCircle, Sparkles } from "lucide-react";
 import { productInquiryUrl } from "@/lib/whatsapp";
 import { AnimatePresence, motion } from "framer-motion";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
+import { AIBot } from "@/components/site/AIBot";
 
 export function CompareBar() {
   const ids = useStore((s) => s.compare);
@@ -69,6 +70,8 @@ export function CompareDrawer() {
   const open = useUI((u) => u.compareOpen);
   const ids = useStore((s) => s.compare);
   const items = ids.map(getProduct).filter(Boolean) as NonNullable<ReturnType<typeof getProduct>>[];
+  const [showAI, setShowAI] = useState(false);
+  const aiContext = `Comparing the following products:\n${items.map(i => `- ${i.name}: ₹${i.price}, ${i.processor}, ${i.ram}, ${i.gpu}`).join("\n")}`;
 
   const rows: { label: string; key: keyof (typeof items)[number] }[] = [
     { label: "Brand", key: "brand" },
@@ -149,6 +152,27 @@ export function CompareDrawer() {
               ))}
             </div>
           </div>
+          {items.length > 0 && (
+            <div className="container-dz pb-8 flex flex-col items-center">
+              {!showAI ? (
+                <button
+                  onClick={() => setShowAI(true)}
+                  className="bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium flex items-center gap-2 hover:scale-105 transition-transform"
+                >
+                  <Sparkles className="size-4" /> Ask AI to Compare
+                </button>
+              ) : (
+                <div className="w-full max-w-2xl mt-4">
+                  <AIBot 
+                    context={aiContext}
+                    initialPrompt="Can you help me choose between these products?"
+                    onClose={() => setShowAI(false)}
+                    className="h-[400px]"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

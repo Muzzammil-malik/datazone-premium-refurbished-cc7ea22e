@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { inr, type Product } from "@/lib/products";
 import { Link } from "@tanstack/react-router";
-import { Heart, GitCompare, MessageCircle } from "lucide-react";
-import { compare, useStore, wishlist } from "@/lib/store";
+import { Heart, GitCompare, MessageCircle, ShoppingCart } from "lucide-react";
+import { cart, compare, useStore, wishlist } from "@/lib/store";
 import { productInquiryUrl } from "@/lib/whatsapp";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
@@ -59,18 +59,32 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             loading="lazy"
             className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-105"
           />
-          <button
-            type="button"
-            aria-label="Order on WhatsApp"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              window.open(productInquiryUrl(product), "_blank", "noopener,noreferrer");
-            }}
-            className="absolute bottom-3 inset-x-3 z-10 rounded-full bg-foreground text-background text-xs py-2.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition inline-flex items-center justify-center gap-1.5"
-          >
-            <MessageCircle className="size-3.5" /> Order on WhatsApp
-          </button>
+          <div className="absolute bottom-3 inset-x-3 z-10 flex items-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition">
+            <button
+              type="button"
+              aria-label="Order on WhatsApp"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(productInquiryUrl(product), "_blank", "noopener,noreferrer");
+              }}
+              className="flex-1 rounded-full bg-foreground text-background text-xs py-2.5 inline-flex items-center justify-center gap-1.5"
+            >
+              <MessageCircle className="size-3.5" /> Order on WhatsApp
+            </button>
+            <button
+              type="button"
+              aria-label="Add to cart"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                cart.add(product.id);
+              }}
+              className="grid place-items-center size-9 shrink-0 rounded-full bg-foreground text-background hover:scale-105 transition-transform"
+            >
+              <ShoppingCart className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
         <div className="mt-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
