@@ -6,9 +6,11 @@ import { BackToTop } from "./BackToTop";
 import { CartDrawer } from "./CartDrawer";
 import { WishlistDrawer } from "./WishlistDrawer";
 import { CompareBar, CompareDrawer } from "./CompareTray";
+import { useAdmin } from "@/lib/admin-store";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const settings = useAdmin((s) => s.settings);
   if (pathname.startsWith("/admin")) {
     return <>{children}</>;
   }
@@ -23,7 +25,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <CompareBar />
       <CompareDrawer />
       <a
-        href="https://wa.me/919999999999"
+        href={`https://wa.me/${settings.whatsapp || "919999999999"}`}
         target="_blank"
         rel="noreferrer"
         aria-label="WhatsApp support"

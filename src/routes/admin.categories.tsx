@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, GripVertical, Pencil, Trash2, Check, X } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/categories")({
   component: CategoriesPage,
@@ -18,12 +18,16 @@ function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
-  const add = () => {
+  const add = async () => {
     if (!name.trim()) return;
     const c: Category = { id: newId(), name: name.trim(), slug: name.toLowerCase().replace(/\s+/g, "-"), order: categories.length, active: true };
-    admin.saveCategory(c);
+    const ok = await admin.saveCategory(c);
     setName("");
-    toast.success("Category added");
+    if (ok) {
+      adminToast.success("Category added", { description: "The category is available in the shop." });
+    } else {
+      adminToast.error("Category could not be added", { description: "Please try again." });
+    }
   };
 
   const move = (id: string, dir: -1 | 1) => {
@@ -51,7 +55,7 @@ function CategoriesPage() {
                 {editingId === c.id ? (
                   <>
                     <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 max-w-xs" />
-                    <Button size="icon" variant="ghost" className="size-8" onClick={() => { admin.saveCategory({ ...c, name: editName, slug: editName.toLowerCase().replace(/\s+/g, "-") }); setEditingId(null); }}>
+                    <Button size="icon" variant="ghost" className="size-8" onClick={async () => { const ok = await admin.saveCategory({ ...c, name: editName, slug: editName.toLowerCase().replace(/\s+/g, "-") }); setEditingId(null); if (ok) { adminToast.success("Category updated", { description: "The category name has been changed." }); } else { adminToast.error("Category could not be updated", { description: "Please try again." }); } }}>
                       <Check className="size-4" />
                     </Button>
                     <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditingId(null)}>
@@ -67,7 +71,7 @@ function CategoriesPage() {
                     <Button size="icon" variant="ghost" className="size-8" onClick={() => { setEditingId(c.id); setEditName(c.name); }}>
                       <Pencil className="size-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteCategory(c.id); toast.success("Deleted"); }}>
+                    <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={async () => { const ok = await admin.deleteCategory(c.id); if (ok) { adminToast.success("Category deleted", { description: "The category was removed." }); } else { adminToast.error("Category could not be deleted", { description: "Please try again." }); } }}>
                       <Trash2 className="size-4" />
                     </Button>
                   </>

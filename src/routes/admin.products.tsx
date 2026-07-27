@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/admin/AdminShell";
-import { useAdmin, admin, newId, type AdminProduct } from "@/lib/admin-store";
+import { useAdmin, admin, newId, type AdminProduct, type ProductVariant } from "@/lib/admin-store";
 import { inr } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { Plus, Search, MoreHorizontal, Pencil, Copy, Trash2, Archive, Download } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/products")({
   component: ProductsPage,
@@ -69,11 +69,15 @@ function ProductsPage() {
 
   const allSelected = filtered.length > 0 && filtered.every((p) => selected.includes(p.id));
 
-  const bulkDelete = () => {
+  const bulkDelete = async () => {
     if (!selected.length) return;
-    selected.forEach((id) => admin.deleteProduct(id));
+    const ok = (await Promise.all(selected.map((id) => admin.deleteProduct(id)))).every(Boolean);
     setSelected([]);
-    toast.success(`Deleted ${selected.length} products`);
+    if (ok) {
+      adminToast.success(`Deleted ${selected.length} products`, { description: "The selected products were removed." });
+    } else {
+      adminToast.error("Some products could not be deleted", { description: "Please try again." });
+    }
   };
 
   return (
@@ -185,10 +189,10 @@ function ProductsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setEditing({ ...p })}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { admin.duplicateProduct(p.id); toast.success("Duplicated"); }}><Copy className="size-3.5" /> Duplicate</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { admin.saveProduct({ ...p, active: !p.active }); }}><Archive className="size-3.5" /> {p.active ? "Archive" : "Restore"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => { const ok = await admin.duplicateProduct(p.id); if (ok) { adminToast.info("Product duplicated", { description: "A copy has been created for editing." }); } else { adminToast.error("Product could not be duplicated", { description: "Please try again." }); } }}><Copy className="size-3.5" /> Duplicate</DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => { const ok = await admin.saveProduct({ ...p, active: !p.active }); if (ok) { adminToast.success(p.active ? "Product archived" : "Product restored", { description: p.active ? "The product is now hidden from the catalog." : "The product is active again." }); } else { adminToast.error("Product status could not be updated", { description: "Please try again." }); } }}><Archive className="size-3.5" /> {p.active ? "Archive" : "Restore"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => { admin.deleteProduct(p.id); toast.success("Deleted"); }}>
+                        <DropdownMenuItem className="text-destructive" onClick={async () => { const ok = await admin.deleteProduct(p.id); if (ok) { adminToast.success("Product deleted", { description: "The product was removed." }); } else { adminToast.error("Product could not be deleted", { description: "Please try again." }); } }}>
                           <Trash2 className="size-3.5" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -211,7 +215,7 @@ function ProductsPage() {
       <ProductForm
         product={editing}
         onClose={() => setEditing(null)}
-        onSave={(p) => { admin.saveProduct(p); toast.success("Product saved"); setEditing(null); }}
+        onSave={async (p) => { const ok = await admin.saveProduct(p); if (ok) { adminToast.success(p.id ? "Product updated" : "Product added", { description: p.name || "The product is live." }); } else { adminToast.error("Product could not be saved", { description: "Please try again." }); } setEditing(null); }}
       />
     </>
   );
@@ -264,20 +268,34 @@ function ProductForm({
             </Section>
 
             <Section title="Specifications">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Processor"><Input value={draft.processor} onChange={(e) => set({ processor: e.target.value })} /></Field>
-                <Field label="Graphics"><Input value={draft.gpu} onChange={(e) => set({ gpu: e.target.value })} /></Field>
-                <Field label="RAM"><Input value={draft.ram} onChange={(e) => set({ ram: e.target.value })} /></Field>
-                <Field label="Storage"><Input value={draft.storage} onChange={(e) => set({ storage: e.target.value })} /></Field>
-                <Field label="Display size"><Input value={draft.displaySize || ""} onChange={(e) => set({ displaySize: e.target.value })} /></Field>
-                <Field label="Resolution"><Input value={draft.resolution || ""} onChange={(e) => set({ resolution: e.target.value })} /></Field>
-                <Field label="Battery health (%)"><Input type="number" value={draft.batteryHealth ?? ""} onChange={(e) => set({ batteryHealth: Number(e.target.value) })} /></Field>
-                <Field label="Windows"><Input value={draft.windows || ""} onChange={(e) => set({ windows: e.target.value })} /></Field>
-              </div>
-              <div className="flex flex-wrap gap-4 pt-1">
-                <Toggle label="Office installed" checked={!!draft.office} onChange={(v) => set({ office: v })} />
-                <Toggle label="Charger included" checked={!!draft.charger} onChange={(v) => set({ charger: v })} />
-              </div>
+              {draft.category === "Monitors" ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Display size"><Input value={draft.displaySize || ""} onChange={(e) => set({ displaySize: e.target.value })} /></Field>
+                    <Field label="Resolution"><Input value={draft.resolution || ""} onChange={(e) => set({ resolution: e.target.value })} /></Field>
+                  </div>
+                  <Field label="Ports"><Input value={draft.ports || ""} onChange={(e) => set({ ports: e.target.value })} placeholder="HDMI, DisplayPort, USB-C, etc." /></Field>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Processor"><Input value={draft.processor} onChange={(e) => set({ processor: e.target.value })} /></Field>
+                    <Field label="Graphics"><Input value={draft.gpu} onChange={(e) => set({ gpu: e.target.value })} /></Field>
+                    <Field label="RAM"><Input value={draft.ram} onChange={(e) => set({ ram: e.target.value })} /></Field>
+                    <Field label="Storage"><Input value={draft.storage} onChange={(e) => set({ storage: e.target.value })} /></Field>
+                    <Field label="Cores / Threads"><Input value={draft.coresThreads || ""} onChange={(e) => set({ coresThreads: e.target.value })} placeholder="4 Cores / 8 Threads" /></Field>
+                    <Field label="Clock Speed"><Input value={draft.clockSpeed || ""} onChange={(e) => set({ clockSpeed: e.target.value })} placeholder="3.6 GHz Base, 4.2 GHz Turbo" /></Field>
+                    <Field label="Display size"><Input value={draft.displaySize || ""} onChange={(e) => set({ displaySize: e.target.value })} /></Field>
+                    <Field label="Resolution"><Input value={draft.resolution || ""} onChange={(e) => set({ resolution: e.target.value })} /></Field>
+                    <Field label="Battery health (%)"><Input type="number" value={draft.batteryHealth ?? ""} onChange={(e) => set({ batteryHealth: Number(e.target.value) })} /></Field>
+                    <Field label="Operating System"><Input value={draft.operatingSystem || ""} onChange={(e) => set({ operatingSystem: e.target.value })} /></Field>
+                  </div>
+                  <div className="flex flex-wrap gap-4 pt-1">
+                    <Toggle label="Office installed" checked={!!draft.office} onChange={(v) => set({ office: v })} />
+                    <Toggle label="Charger included" checked={!!draft.charger} onChange={(v) => set({ charger: v })} />
+                  </div>
+                </>
+              )}
             </Section>
 
             <Section title="Condition & pricing">
@@ -303,9 +321,217 @@ function ProductForm({
               </div>
             </Section>
 
+            <Section title="Variants">
+              <div className="text-xs text-muted-foreground mb-3">
+                Add product variants like RAM, Storage, Color, etc. Each variant can have its own price and stock.
+              </div>
+              <div className="space-y-4">
+                {(draft.variants || []).map((variant, index) => (
+                  <div key={variant.id} className="rounded-lg border bg-card p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Variant {index + 1}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => {
+                          const next = (draft.variants || []).filter((_, i) => i !== index);
+                          set({ variants: next });
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Type (e.g., RAM, Storage)">
+                        <Input
+                          value={variant.type}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], type: e.target.value };
+                            set({ variants: next });
+                          }}
+                          placeholder="RAM"
+                        />
+                      </Field>
+                      <Field label="Value (e.g., 8GB, 16GB)">
+                        <Input
+                          value={variant.value}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], value: e.target.value };
+                            set({ variants: next });
+                          }}
+                          placeholder="8GB"
+                        />
+                      </Field>
+                      <Field label="Price (₹)">
+                        <Input
+                          type="number"
+                          value={variant.price}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], price: Number(e.target.value) };
+                            set({ variants: next });
+                          }}
+                        />
+                      </Field>
+                      <Field label="Original price (₹)">
+                        <Input
+                          type="number"
+                          value={variant.originalPrice ?? ""}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], originalPrice: Number(e.target.value) || undefined };
+                            set({ variants: next });
+                          }}
+                        />
+                      </Field>
+                      <Field label="Stock quantity">
+                        <Input
+                          type="number"
+                          value={variant.stock}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], stock: Number(e.target.value) };
+                            set({ variants: next });
+                          }}
+                        />
+                      </Field>
+                      <Field label="Availability">
+                        <Select
+                          value={variant.availability}
+                          onValueChange={(v) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], availability: v as ProductVariant["availability"] };
+                            set({ variants: next });
+                          }}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {["In stock", "Low stock", "Out of stock"].map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="SKU (optional)">
+                        <Input
+                          value={variant.sku ?? ""}
+                          onChange={(e) => {
+                            const next = [...(draft.variants || [])];
+                            next[index] = { ...next[index], sku: e.target.value || undefined };
+                            set({ variants: next });
+                          }}
+                          placeholder="SKU-001"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const next: ProductVariant[] = [...(draft.variants || []), {
+                      id: `dz-${newId()}`,
+                      productId: draft.id,
+                      type: "",
+                      value: "",
+                      price: draft.price,
+                      originalPrice: draft.original || undefined,
+                      stock: 1,
+                      availability: "In stock",
+                      sku: undefined,
+                      order: (draft.variants || []).length,
+                    }];
+                    set({ variants: next });
+                  }}
+                >
+                  <Plus className="size-4 mr-2" /> Add variant
+                </Button>
+              </div>
+            </Section>
+
             <Section title="Media">
-              <Field label="Primary image URL"><Input value={draft.image} onChange={(e) => set({ image: e.target.value })} placeholder="/src/assets/…" /></Field>
-              <Field label="Additional images (comma-separated)"><Input value={(draft.images || []).join(", ")} onChange={(e) => set({ images: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></Field>
+              <Field label="Product image gallery">
+                <div className="space-y-3 rounded-xl border bg-background p-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => {
+                      const value = window.prompt("Enter image URL");
+                      if (!value) return;
+                      const next = [...(draft.images ?? []), value.trim()].filter(Boolean);
+                      set({ images: next, image: next[0] || draft.image });
+                    }}>
+                      + Add image
+                    </Button>
+                    {draft.images?.length ? (
+                      <Button type="button" size="sm" variant="outline" onClick={() => {
+                        const next = [...(draft.images ?? [])];
+                        const first = next.shift();
+                        set({ images: next, image: next[0] || first || "" });
+                      }}>
+                        Remove first
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {(draft.images || []).map((src, index) => (
+                      <div key={`${src}-${index}`} className="rounded-lg border bg-card p-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <button
+                            type="button"
+                            className="text-xs px-2 py-1 rounded bg-muted"
+                            onClick={() => {
+                              const next = [...(draft.images ?? [])];
+                              const [item] = next.splice(index, 1);
+                              next.splice(Math.max(index - 1, 0), 0, item);
+                              set({ images: next, image: next[0] || draft.image });
+                            }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs px-2 py-1 rounded bg-muted"
+                            onClick={() => {
+                              const next = [...(draft.images ?? [])];
+                              const [item] = next.splice(index, 1);
+                              next.splice(Math.min(index + 1, next.length), 0, item);
+                              set({ images: next, image: next[0] || draft.image });
+                            }}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className="ml-auto text-xs px-2 py-1 rounded bg-destructive text-destructive-foreground"
+                            onClick={() => {
+                              const next = (draft.images || []).filter((_, i) => i !== index);
+                              set({ images: next, image: next[0] || "" });
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <img src={src} alt="" className="h-24 w-full rounded object-cover border" />
+                        <Input
+                          value={src}
+                          onChange={(e) => {
+                            const next = [...(draft.images || [])];
+                            next[index] = e.target.value;
+                            set({ images: next, image: next[0] || draft.image });
+                          }}
+                          className="mt-2"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Field>
               <Field label="Video URL (optional)"><Input value={draft.video || ""} onChange={(e) => set({ video: e.target.value })} /></Field>
             </Section>
 
@@ -320,7 +546,21 @@ function ProductForm({
               <div className="flex flex-wrap gap-4">
                 <Toggle label="Featured product" checked={!!draft.featured} onChange={(v) => set({ featured: v })} />
                 <Toggle label="New arrival" checked={!!draft.newArrival} onChange={(v) => set({ newArrival: v })} />
-                <Toggle label="Active" checked={!!draft.active} onChange={(v) => set({ active: v })} />
+                <div className="flex-1 min-w-[200px]">
+                  <Field label="Visibility">
+                    <Select
+                      value={draft.visibility ?? "active"}
+                      onValueChange={(v) => set({ visibility: v as "active" | "hidden" | "unavailable" })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="hidden">Hidden</SelectItem>
+                        <SelectItem value="unavailable">Currently Unavailable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
               </div>
             </Section>
           </div>

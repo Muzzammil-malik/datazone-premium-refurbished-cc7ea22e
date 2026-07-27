@@ -10,6 +10,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   const wished = useStore((s) => s.wishlist.includes(product.id));
   const compared = useStore((s) => s.compare.includes(product.id));
   const compareFull = useStore((s) => s.compare.length >= 4 && !s.compare.includes(product.id));
+  const coverImage = (product.images && product.images[0]) || product.image;
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -21,6 +22,11 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
       <Link to="/product/$id" params={{ id: product.id }} className="block">
         <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface hairline">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+            {product.featured && (
+              <span className="featured-badge text-[9px] sm:text-[10px] px-2 py-0.5">
+                ★ Featured
+              </span>
+            )}
             <span className="text-[10px] px-2 py-1 rounded-full bg-background hairline tracking-wider uppercase">{product.condition}</span>
             {off > 0 && <span className="text-[10px] px-2 py-1 rounded-full bg-foreground text-background tracking-wider">−{off}%</span>}
           </div>
@@ -54,7 +60,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             </button>
           </div>
           <img
-            src={product.image}
+            src={coverImage}
             alt={product.name}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-105"
@@ -87,10 +93,31 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           </div>
         </div>
         <div className="mt-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="eyebrow text-[10px]">{product.brand}</div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="eyebrow text-[10px]">{product.brand}</div>
+              {product.visibility === "unavailable" && (
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive tracking-wider uppercase">
+                  Currently Unavailable
+                </span>
+              )}
+            </div>
             <h3 className="mt-1 text-[15px] font-medium truncate">{product.name}</h3>
-            <p className="mt-0.5 text-xs text-ink-soft truncate">{product.processor} · {product.ram}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {product.category === "Monitors" ? (
+                [(product as any).displaySize, (product as any).resolution, (product as any).ports].filter(Boolean).map((spec) => (
+                  <span key={spec} className="rounded-full bg-surface px-2 py-1 text-[10px] leading-none text-ink-soft ring-1 ring-border/70">
+                    {spec}
+                  </span>
+                ))
+              ) : (
+                [product.processor, product.ram, product.storage].filter(Boolean).map((spec) => (
+                  <span key={spec} className="rounded-full bg-surface px-2 py-1 text-[10px] leading-none text-ink-soft ring-1 ring-border/70">
+                    {spec}
+                  </span>
+                ))
+              )}
+            </div>
           </div>
           <div className="text-right shrink-0">
             <div className="text-[15px] font-semibold">{inr(product.price)}</div>

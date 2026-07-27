@@ -1,6 +1,6 @@
 import { useSyncExternalStore, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 import laptop1 from "@/assets/product-laptop-1.jpg";
 import laptop2 from "@/assets/product-laptop-2.jpg";
@@ -39,9 +39,14 @@ export type Product = {
   condition: "Grade A" | "Grade A+" | "Grade B" | string;
   availability: "In stock" | "Low stock" | "Out of stock" | string;
   image: string;
+  images?: string[];
   tagline: string;
   rating: number;
   reviews: number;
+  description?: string;
+  featured?: boolean;
+  visibility?: "active" | "hidden" | "unavailable";
+  variants?: ProductVariant[];
 };
 
 export type AdminProduct = Product & {
@@ -49,8 +54,9 @@ export type AdminProduct = Product & {
   description?: string;
   displaySize?: string;
   resolution?: string;
+  ports?: string;
   batteryHealth?: number;
-  windows?: string;
+  operatingSystem?: string;
   office?: boolean;
   charger?: boolean;
   slug?: string;
@@ -59,9 +65,12 @@ export type AdminProduct = Product & {
   keywords?: string;
   featured?: boolean;
   newArrival?: boolean;
-  active?: boolean;
+  visibility?: "active" | "hidden" | "unavailable";
+  coresThreads?: string;
+  clockSpeed?: string;
   images?: string[];
   video?: string;
+  variants?: ProductVariant[];
 };
 
 export type Category = { id: string; name: string; slug: string; order: number; active: boolean };
@@ -78,6 +87,18 @@ export type InventoryRecord = {
   shelf: string;
   status: "Available" | "Reserved" | "Sold" | "Under Repair";
   remarks?: string;
+};
+export type ProductVariant = {
+  id: string;
+  productId: string;
+  type: string;
+  value: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  availability: "In stock" | "Out of stock" | "Low stock";
+  sku?: string;
+  order: number;
 };
 export type Inquiry = {
   id: string;
@@ -122,6 +143,8 @@ export type Banner = {
 export type Homepage = {
   heroHeadline: string;
   heroSubtitle: string;
+  heroFeaturedProductId?: string;
+  heroFeaturedThumbnail?: string;
   featuredIds: string[];
   why: { title: string; body: string }[];
   testimonialIds: string[];
@@ -136,7 +159,7 @@ export type Settings = {
   address: string;
   mapsLink: string;
   hours: string;
-  social: { facebook: string; instagram: string; youtube: string; linkedin: string; website: string };
+  social: { facebook: string; instagram: string; youtube: string; linkedin: string; website: string; olx: string };
   seo: { gaId: string; metaTitle: string; metaDescription: string };
 };
 export type Activity = {
@@ -150,6 +173,7 @@ type AdminState = {
   products: AdminProduct[];
   categories: Category[];
   brands: Brand[];
+  variants: ProductVariant[];
   inventory: InventoryRecord[];
   inquiries: Inquiry[];
   services: Service[];
@@ -164,6 +188,8 @@ type AdminState = {
 const defaultHomepage: Homepage = {
   heroHeadline: "",
   heroSubtitle: "",
+  heroFeaturedProductId: "dz-thinkpad-x1",
+  heroFeaturedThumbnail: "",
   featuredIds: [],
   why: [],
   testimonialIds: [],
@@ -174,9 +200,9 @@ const defaultSettings: Settings = {
   phone: "",
   email: "",
   address: "",
-  mapsLink: "",
+  mapsLink: "https://maps.app.goo.gl/mBeM4Nm3r8Ete5WGA",
   hours: "",
-  social: { facebook: "", instagram: "", youtube: "", linkedin: "", website: "" },
+  social: { facebook: "", instagram: "", youtube: "", linkedin: "", website: "", olx: "" },
   seo: { gaId: "", metaTitle: "", metaDescription: "" },
 };
 
@@ -184,6 +210,7 @@ let state: AdminState = {
   products: [],
   categories: [],
   brands: [],
+  variants: [],
   inventory: [],
   inquiries: [],
   services: [],
@@ -206,76 +233,90 @@ export const newId = uid;
 // ================ row <-> domain mappers ================
 type Row = Record<string, any>;
 
-const rowToProduct = (r: Row): AdminProduct => ({
-  id: r.id,
-  name: r.name,
-  brand: r.brand,
-  category: r.category,
-  processor: r.processor ?? "",
-  ram: r.ram ?? "",
-  storage: r.storage ?? "",
-  gpu: r.gpu ?? "",
-  price: Number(r.price ?? 0),
-  original: Number(r.original_price ?? 0),
-  condition: r.condition ?? "Grade A",
-  availability: r.availability ?? "In stock",
-  image: resolveImage(r.image),
-  tagline: r.tagline ?? "",
-  rating: Number(r.rating ?? 4.5),
-  reviews: Number(r.reviews ?? 0),
-  model: r.model ?? undefined,
-  description: r.description ?? undefined,
-  displaySize: r.display_size ?? undefined,
-  resolution: r.resolution ?? undefined,
-  batteryHealth: r.battery_health ?? undefined,
-  windows: r.windows ?? undefined,
-  office: r.office ?? false,
-  charger: r.charger ?? true,
-  slug: r.slug ?? undefined,
-  metaTitle: r.meta_title ?? undefined,
-  metaDescription: r.meta_description ?? undefined,
-  keywords: r.keywords ?? undefined,
-  featured: !!r.featured,
-  newArrival: !!r.new_arrival,
-  active: r.active ?? true,
-  images: (r.images ?? []).map(resolveImage),
-  video: r.video ?? undefined,
-});
-const productToRow = (p: AdminProduct): Row => ({
-  id: p.id,
-  name: p.name,
-  brand: p.brand,
-  category: p.category,
-  processor: p.processor,
-  ram: p.ram,
-  storage: p.storage,
-  gpu: p.gpu,
-  price: p.price,
-  original_price: p.original,
-  condition: p.condition,
-  availability: p.availability,
-  image: unresolveImage(p.image),
-  tagline: p.tagline,
-  rating: p.rating,
-  reviews: p.reviews,
-  model: p.model ?? null,
-  description: p.description ?? null,
-  display_size: p.displaySize ?? null,
-  resolution: p.resolution ?? null,
-  battery_health: p.batteryHealth ?? null,
-  windows: p.windows ?? null,
-  office: !!p.office,
-  charger: p.charger !== false,
-  slug: p.slug ?? null,
-  meta_title: p.metaTitle ?? null,
-  meta_description: p.metaDescription ?? null,
-  keywords: p.keywords ?? null,
-  featured: !!p.featured,
-  new_arrival: !!p.newArrival,
-  active: p.active !== false,
-  images: (p.images ?? []).map(unresolveImage),
-  video: p.video ?? null,
-});
+const rowToProduct = (r: Row): AdminProduct => {
+  const normalizedImages = (r.images ?? []).map(resolveImage).filter(Boolean);
+  const primaryImage = resolveImage(r.image) || normalizedImages[0] || "";
+  return {
+    id: r.id,
+    name: r.name,
+    brand: r.brand,
+    category: r.category,
+    processor: r.processor ?? "",
+    ram: r.ram ?? "",
+    storage: r.storage ?? "",
+    gpu: r.gpu ?? "",
+    price: Number(r.price ?? 0),
+    original: Number(r.original_price ?? 0),
+    condition: r.condition ?? "Grade A",
+    availability: r.availability ?? "In stock",
+    image: primaryImage,
+    tagline: r.tagline ?? "",
+    rating: Number(r.rating ?? 4.5),
+    reviews: Number(r.reviews ?? 0),
+    model: r.model ?? undefined,
+    description: r.description ?? undefined,
+    displaySize: r.display_size ?? undefined,
+    resolution: r.resolution ?? undefined,
+    batteryHealth: r.battery_health ?? undefined,
+    operatingSystem: r.windows ?? r.operating_system ?? undefined,
+    office: r.office ?? false,
+    charger: r.charger ?? true,
+    slug: r.slug ?? undefined,
+    metaTitle: r.meta_title ?? undefined,
+    metaDescription: r.meta_description ?? undefined,
+    keywords: r.keywords ?? undefined,
+    featured: !!r.featured,
+    newArrival: !!r.new_arrival,
+    visibility: (r.visibility as "active" | "hidden" | "unavailable") ?? (r.active === false ? "hidden" : "active"),
+    coresThreads: r.cores_threads ?? undefined,
+    clockSpeed: r.clock_speed ?? undefined,
+    images: normalizedImages.length ? normalizedImages : primaryImage ? [primaryImage] : [],
+    video: r.video ?? undefined,
+    variants: [],
+  };
+};
+const productToRow = (p: AdminProduct): Row => {
+  const images = (p.images ?? []).filter(Boolean);
+  const primaryImage = p.image || images[0] || "";
+  return {
+    id: p.id,
+    name: p.name,
+    brand: p.brand,
+    category: p.category,
+    processor: p.processor,
+    ram: p.ram,
+    storage: p.storage,
+    gpu: p.gpu,
+    price: p.price,
+    original_price: p.original,
+    condition: p.condition,
+    availability: p.availability,
+    image: unresolveImage(primaryImage),
+    tagline: p.tagline,
+    rating: p.rating,
+    reviews: p.reviews,
+    model: p.model ?? null,
+    description: p.description ?? null,
+    display_size: p.displaySize ?? null,
+    resolution: p.resolution ?? null,
+    battery_health: p.batteryHealth ?? null,
+    windows: p.operatingSystem ?? null,
+    office: !!p.office,
+    charger: p.charger !== false,
+    slug: p.slug ?? null,
+    meta_title: p.metaTitle ?? null,
+    meta_description: p.metaDescription ?? null,
+    keywords: p.keywords ?? null,
+    featured: !!p.featured,
+    new_arrival: !!p.newArrival,
+    active: p.visibility === "hidden" ? false : true,
+    visibility: p.visibility ?? "active",
+    cores_threads: p.coresThreads ?? null,
+    clock_speed: p.clockSpeed ?? null,
+    images: (images.length ? images : primaryImage ? [primaryImage] : []).map(unresolveImage),
+    video: p.video ?? null,
+  };
+};
 
 const rowToCategory = (r: Row): Category => ({
   id: r.id, name: r.name, slug: r.slug, order: r.order ?? 0, active: !!r.active,
@@ -381,20 +422,52 @@ const bannerToRow = (b: Banner): Row => ({
   active: b.active,
 });
 
-const rowToHomepage = (r: Row): Homepage => ({
-  heroHeadline: r.hero_headline ?? "",
-  heroSubtitle: r.hero_subtitle ?? "",
-  featuredIds: r.featured_ids ?? [],
-  why: r.why ?? [],
-  testimonialIds: r.testimonial_ids ?? [],
-});
+const rowToHomepage = (r: Row): Homepage => {
+  const whyData = r.why;
+  let whyList: { title: string; body: string }[] = [];
+  let heroFeaturedProductId: string | undefined = undefined;
+  let heroFeaturedThumbnail: string | undefined = undefined;
+
+  if (Array.isArray(whyData)) {
+    whyList = whyData as { title: string; body: string }[];
+  } else if (whyData && typeof whyData === "object") {
+    const obj = whyData as Record<string, any>;
+    if (Array.isArray(obj.items)) {
+      whyList = obj.items;
+    }
+    if (typeof obj.heroFeaturedProductId === "string") {
+      heroFeaturedProductId = obj.heroFeaturedProductId;
+    }
+    if (typeof obj.heroFeaturedThumbnail === "string") {
+      heroFeaturedThumbnail = obj.heroFeaturedThumbnail;
+    }
+  }
+
+  heroFeaturedProductId = heroFeaturedProductId ?? (r.hero_featured_product_id as string) ?? (r.hero_product_id as string) ?? undefined;
+  heroFeaturedThumbnail = heroFeaturedThumbnail ?? (r.hero_featured_thumbnail as string) ?? (r.hero_thumbnail as string) ?? undefined;
+
+  return {
+    heroHeadline: r.hero_headline ?? "",
+    heroSubtitle: r.hero_subtitle ?? "",
+    heroFeaturedProductId,
+    heroFeaturedThumbnail,
+    featuredIds: r.featured_ids ?? [],
+    why: whyList,
+    testimonialIds: r.testimonial_ids ?? [],
+  };
+};
+
 const homepageToRow = (h: Homepage): Row => ({
   id: 1,
   hero_headline: h.heroHeadline,
   hero_subtitle: h.heroSubtitle,
   featured_ids: h.featuredIds,
-  why: h.why,
   testimonial_ids: h.testimonialIds,
+  why: {
+    items: h.why || [],
+    heroFeaturedProductId: h.heroFeaturedProductId ?? null,
+    heroFeaturedThumbnail: h.heroFeaturedThumbnail ?? null,
+  },
 });
 
 const rowToSettings = (r: Row): Settings => ({
@@ -438,7 +511,7 @@ async function hydrate() {
   hydratingPromise = (async () => {
     try {
       const [
-        p, c, b, inv, inq, s, rv, bn, hp, st, act,
+        p, c, b, inv, inq, s, rv, bn, hp, st, act, v,
       ] = await Promise.all([
         (supabase as any).from("products").select("*").order("created_at", { ascending: false }),
         (supabase as any).from("categories").select("*").order("order", { ascending: true }),
@@ -451,11 +524,30 @@ async function hydrate() {
         (supabase as any).from("homepage").select("*").eq("id", 1).maybeSingle(),
         (supabase as any).from("settings").select("*").eq("id", 1).maybeSingle(),
         (supabase as any).from("activity").select("*").order("at", { ascending: false }).limit(30),
+        (supabase as any).from("product_variants").select("*").order("order", { ascending: true }),
       ]);
+      const variants = (v.data ?? []).map((r: Row): ProductVariant => ({
+        id: r.id,
+        productId: r.product_id,
+        type: r.type,
+        value: r.value,
+        price: Number(r.price),
+        originalPrice: r.original_price ? Number(r.original_price) : undefined,
+        stock: Number(r.stock),
+        availability: r.availability ?? "In stock",
+        sku: r.sku ?? undefined,
+        order: Number(r.order ?? 0),
+      }));
+      const products = (p.data ?? []).map(rowToProduct);
+      // Attach variants to products
+      products.forEach((product: AdminProduct) => {
+        product.variants = variants.filter((v: ProductVariant) => v.productId === product.id);
+      });
       set({
-        products: (p.data ?? []).map(rowToProduct),
+        products,
         categories: (c.data ?? []).map(rowToCategory),
         brands: (b.data ?? []).map(rowToBrand),
+        variants,
         inventory: (inv.data ?? []).map(rowToInventory),
         inquiries: (inq.data ?? []).map(rowToInquiry),
         services: (s.data ?? []).map(rowToService),
@@ -499,7 +591,7 @@ async function pushActivity(a: Omit<Activity, "id" | "at">) {
 function reportError(err: any, action: string) {
   console.error(`[admin-store] ${action} failed`, err);
   const msg = err?.message ? `${action} failed: ${err.message}` : `${action} failed`;
-  if (typeof window !== "undefined") toast.error(msg);
+  if (typeof window !== "undefined") adminToast.error(action, { description: err?.message || "Please try again." });
 }
 
 async function upsertRow(table: string, row: Row, action: string) {
@@ -524,61 +616,164 @@ export const admin = {
 
   // products
   async saveProduct(p: AdminProduct) {
-    const exists = state.products.some((x) => x.id === p.id);
-    set({ products: exists ? state.products.map((x) => (x.id === p.id ? p : x)) : [p, ...state.products] });
-    const ok = await upsertRow("products", productToRow(p), "Save product");
-    if (ok) pushActivity({ kind: exists ? "product.update" : "product.add", message: `${exists ? "Updated" : "Added"} product “${p.name}”` });
+    const images = (p.images ?? []).filter(Boolean);
+    const normalized: AdminProduct = {
+      ...p,
+      image: p.image || images[0] || "",
+      images: images.length ? images : p.image ? [p.image] : [],
+    };
+    const exists = state.products.some((x) => x.id === normalized.id);
+    set({ products: exists ? state.products.map((x) => (x.id === normalized.id ? normalized : x)) : [normalized, ...state.products] });
+    const ok = await upsertRow("products", productToRow(normalized), "Save product");
+    if (ok) {
+      // Handle variants
+      if (normalized.variants && normalized.variants.length > 0) {
+        // Save all variants
+        for (const variant of normalized.variants) {
+          const variantRow = {
+            id: variant.id,
+            product_id: variant.productId,
+            type: variant.type,
+            value: variant.value,
+            price: variant.price,
+            original_price: variant.originalPrice ?? null,
+            stock: variant.stock,
+            availability: variant.availability,
+            sku: variant.sku ?? null,
+            order: variant.order,
+          };
+          await upsertRow("product_variants", variantRow, "Save variant");
+        }
+        // Delete variants that are no longer in the product
+        const existingVariants = state.variants.filter((v) => v.productId === normalized.id);
+        const newVariantIds = normalized.variants.map((v) => v.id);
+        const toDelete = existingVariants.filter((v) => !newVariantIds.includes(v.id));
+        for (const variantToDelete of toDelete) {
+          await deleteRow("product_variants", variantToDelete.id, "Delete variant");
+        }
+      } else {
+        // Delete all variants for this product if none are provided
+        const existingVariants = state.variants.filter((v) => v.productId === normalized.id);
+        for (const variantToDelete of existingVariants) {
+          await deleteRow("product_variants", variantToDelete.id, "Delete variant");
+        }
+      }
+      pushActivity({ kind: exists ? "product.update" : "product.add", message: `${exists ? "Updated" : "Added"} product "${normalized.name}"` });
+    }
+    return ok;
   },
   async deleteProduct(id: string) {
     const prev = state.products;
     set({ products: prev.filter((p) => p.id !== id) });
     const ok = await deleteRow("products", id, "Delete product");
-    if (!ok) set({ products: prev });
+    if (ok) {
+      // Delete all variants for this product
+      const existingVariants = state.variants.filter((v) => v.productId === id);
+      for (const variantToDelete of existingVariants) {
+        await deleteRow("product_variants", variantToDelete.id, "Delete variant");
+      }
+    } else {
+      set({ products: prev });
+    }
+    return ok;
   },
   async duplicateProduct(id: string) {
     const src = state.products.find((p) => p.id === id);
-    if (!src) return;
+    if (!src) return false;
     const copy: AdminProduct = { ...src, id: `${src.id}-copy-${uid()}`, name: `${src.name} (copy)` };
-    await admin.saveProduct(copy);
+    const ok = await admin.saveProduct(copy);
+    if (ok && typeof window !== "undefined") adminToast.info("Product duplicated", { description: "A copy has been created for editing." });
+    return ok;
+  },
+
+  // variants
+  async saveVariant(v: ProductVariant) {
+    const exists = state.variants.some((x) => x.id === v.id);
+    set({ variants: exists ? state.variants.map((x) => (x.id === v.id ? v : x)) : [...state.variants, v] });
+    const row = {
+      id: v.id,
+      product_id: v.productId,
+      type: v.type,
+      value: v.value,
+      price: v.price,
+      original_price: v.originalPrice ?? null,
+      stock: v.stock,
+      availability: v.availability,
+      sku: v.sku ?? null,
+      order: v.order,
+    };
+    const ok = await upsertRow("product_variants", row, "Save variant");
+    if (ok) {
+      const product = state.products.find((p) => p.id === v.productId);
+      if (product) {
+        const updatedVariants = exists
+          ? product.variants?.map((x) => x.id === v.id ? v : x) || [v]
+          : [...(product.variants || []), v];
+        set({ products: state.products.map((p) => p.id === v.productId ? { ...p, variants: updatedVariants } : p) });
+      }
+    }
+    return ok;
+  },
+  async deleteVariant(id: string) {
+    const prev = state.variants;
+    const variant = state.variants.find((v) => v.id === id);
+    set({ variants: prev.filter((v) => v.id !== id) });
+    const ok = await deleteRow("product_variants", id, "Delete variant");
+    if (!ok) {
+      set({ variants: prev });
+    } else if (variant) {
+      const product = state.products.find((p) => p.id === variant.productId);
+      if (product) {
+        const updatedVariants = product.variants?.filter((v) => v.id !== id) || [];
+        set({ products: state.products.map((p) => p.id === variant.productId ? { ...p, variants: updatedVariants } : p) });
+      }
+    }
+    return ok;
   },
 
   // categories
   async saveCategory(c: Category) {
     const exists = state.categories.some((x) => x.id === c.id);
     set({ categories: exists ? state.categories.map((x) => (x.id === c.id ? c : x)) : [...state.categories, c] });
-    await upsertRow("categories", categoryToRow(c), "Save category");
+    const ok = await upsertRow("categories", categoryToRow(c), "Save category");
+    return ok;
   },
   async deleteCategory(id: string) {
     const prev = state.categories;
     set({ categories: prev.filter((c) => c.id !== id) });
     const ok = await deleteRow("categories", id, "Delete category");
     if (!ok) set({ categories: prev });
+    return ok;
   },
 
   // brands
   async saveBrand(b: Brand) {
     const exists = state.brands.some((x) => x.id === b.id);
     set({ brands: exists ? state.brands.map((x) => (x.id === b.id ? b : x)) : [...state.brands, b] });
-    await upsertRow("brands", brandToRow(b), "Save brand");
+    const ok = await upsertRow("brands", brandToRow(b), "Save brand");
+    return ok;
   },
   async deleteBrand(id: string) {
     const prev = state.brands;
     set({ brands: prev.filter((b) => b.id !== id) });
     const ok = await deleteRow("brands", id, "Delete brand");
     if (!ok) set({ brands: prev });
+    return ok;
   },
 
   // inventory
   async saveInventory(r: InventoryRecord) {
     const exists = state.inventory.some((x) => x.id === r.id);
     set({ inventory: exists ? state.inventory.map((x) => (x.id === r.id ? r : x)) : [r, ...state.inventory] });
-    await upsertRow("inventory", inventoryToRow(r), "Save inventory");
+    const ok = await upsertRow("inventory", inventoryToRow(r), "Save inventory");
+    return ok;
   },
   async deleteInventory(id: string) {
     const prev = state.inventory;
     set({ inventory: prev.filter((r) => r.id !== id) });
     const ok = await deleteRow("inventory", id, "Delete inventory");
     if (!ok) set({ inventory: prev });
+    return ok;
   },
 
   // inquiries
@@ -587,38 +782,44 @@ export const admin = {
     set({ inquiries: exists ? state.inquiries.map((x) => (x.id === i.id ? i : x)) : [i, ...state.inquiries] });
     const ok = await upsertRow("inquiries", inquiryToRow(i), "Save inquiry");
     if (ok && !exists) pushActivity({ kind: "inquiry.new", message: `New inquiry from ${i.customer}` });
+    return ok;
   },
   async deleteInquiry(id: string) {
     const prev = state.inquiries;
     set({ inquiries: prev.filter((i) => i.id !== id) });
     const ok = await deleteRow("inquiries", id, "Delete inquiry");
     if (!ok) set({ inquiries: prev });
+    return ok;
   },
 
   // services
   async saveService(s: Service) {
     const exists = state.services.some((x) => x.id === s.id);
     set({ services: exists ? state.services.map((x) => (x.id === s.id ? s : x)) : [...state.services, s] });
-    await upsertRow("services", serviceToRow(s), "Save service");
+    const ok = await upsertRow("services", serviceToRow(s), "Save service");
+    return ok;
   },
   async deleteService(id: string) {
     const prev = state.services;
     set({ services: prev.filter((s) => s.id !== id) });
     const ok = await deleteRow("services", id, "Delete service");
     if (!ok) set({ services: prev });
+    return ok;
   },
 
   // reviews
   async saveReview(r: Review) {
     const exists = state.reviews.some((x) => x.id === r.id);
     set({ reviews: exists ? state.reviews.map((x) => (x.id === r.id ? r : x)) : [r, ...state.reviews] });
-    await upsertRow("reviews", reviewToRow(r), "Save review");
+    const ok = await upsertRow("reviews", reviewToRow(r), "Save review");
+    return ok;
   },
   async deleteReview(id: string) {
     const prev = state.reviews;
     set({ reviews: prev.filter((r) => r.id !== id) });
     const ok = await deleteRow("reviews", id, "Delete review");
     if (!ok) set({ reviews: prev });
+    return ok;
   },
 
   // banners
@@ -627,21 +828,25 @@ export const admin = {
     set({ banners: exists ? state.banners.map((x) => (x.id === b.id ? b : x)) : [b, ...state.banners] });
     const ok = await upsertRow("banners", bannerToRow(b), "Save banner");
     if (ok) pushActivity({ kind: "banner.update", message: `${exists ? "Updated" : "Added"} banner “${b.title}”` });
+    return ok;
   },
   async deleteBanner(id: string) {
     const prev = state.banners;
     set({ banners: prev.filter((b) => b.id !== id) });
     const ok = await deleteRow("banners", id, "Delete banner");
     if (!ok) set({ banners: prev });
+    return ok;
   },
 
   // homepage / settings singletons
   async saveHomepage(h: Homepage) {
     set({ homepage: h });
-    await upsertRow("homepage", homepageToRow(h), "Save homepage");
+    const ok = await upsertRow("homepage", homepageToRow(h), "Save homepage");
+    return ok;
   },
   async saveSettings(s: Settings) {
     set({ settings: s });
-    await upsertRow("settings", settingsToRow(s), "Save settings");
+    const ok = await upsertRow("settings", settingsToRow(s), "Save settings");
+    return ok;
   },
 };

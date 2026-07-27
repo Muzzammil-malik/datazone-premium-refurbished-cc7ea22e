@@ -7,14 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Save } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/settings")({ component: SettingsPage });
 
 function SettingsPage() {
   const settings = useAdmin((s) => s.settings);
   const [draft, setDraft] = useState<Settings>(settings);
-  const save = () => { admin.saveSettings(draft); toast.success("Settings saved"); };
+  const save = async () => { const ok = await admin.saveSettings(draft); if (ok) { adminToast.success("Settings saved", { description: "Your admin settings are updated." }); } else { adminToast.error("Settings could not be saved", { description: "Please try again." }); } };
   return (
     <>
       <PageHeader title="Settings" description="Store, contact, social and SEO configuration."
@@ -34,9 +34,9 @@ function SettingsPage() {
           <F label="Business hours"><Input value={draft.hours} onChange={(e) => setDraft({ ...draft, hours: e.target.value })} /></F>
         </Panel>
         <Panel title="Social media">
-          {(["facebook", "instagram", "youtube", "linkedin", "website"] as const).map((k) => (
-            <F key={k} label={k[0].toUpperCase() + k.slice(1)}>
-              <Input value={draft.social[k]} onChange={(e) => setDraft({ ...draft, social: { ...draft.social, [k]: e.target.value } })} />
+          {(["facebook", "instagram", "youtube", "linkedin", "website", "olx"] as const).map((k) => (
+            <F key={k} label={k === "olx" ? "OLX" : k[0].toUpperCase() + k.slice(1)}>
+              <Input value={draft.social[k]} onChange={(e) => setDraft({ ...draft, social: { ...draft.social, [k]: e.target.value } })} placeholder={k === "olx" ? "https://www.olx.in/profile/..." : ""} />
             </F>
           ))}
         </Panel>
@@ -48,7 +48,7 @@ function SettingsPage() {
       </div>
       <div className="mt-6 rounded-xl border border-dashed p-4 flex items-center justify-between">
         <div><div className="text-sm font-medium">Reset admin data</div><p className="text-xs text-muted-foreground">Clears local admin storage and reseeds with demo data.</p></div>
-        <Button variant="outline" size="sm" onClick={() => { admin.reset(); toast.success("Admin data reset"); setDraft(settings); }}>Reset</Button>
+        <Button variant="outline" size="sm" onClick={() => { admin.reset(); adminToast.warning("Admin data reset", { description: "Local admin data has been refreshed." }); setDraft(settings); }}>Reset</Button>
       </div>
     </>
   );

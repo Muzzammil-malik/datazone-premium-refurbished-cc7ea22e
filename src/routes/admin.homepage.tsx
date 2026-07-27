@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/homepage")({ component: HomepageManager });
 
@@ -17,7 +17,7 @@ function HomepageManager() {
   const products = useAdmin((s) => s.products);
   const reviews = useAdmin((s) => s.reviews);
   const [draft, setDraft] = useState<Homepage>(homepage);
-  const save = () => { admin.saveHomepage(draft); toast.success("Homepage updated"); };
+  const save = async () => { const ok = await admin.saveHomepage(draft); if (ok) { adminToast.success("Homepage updated", { description: "The homepage changes are now live." }); } else { adminToast.error("Homepage could not be updated", { description: "Please try again." }); } };
   return (
     <>
       <PageHeader title="Homepage Manager" description="Edit hero, featured products, benefits and testimonials — no code required."
@@ -26,6 +26,67 @@ function HomepageManager() {
         <Panel title="Hero banner">
           <F label="Headline"><Input value={draft.heroHeadline} onChange={(e) => setDraft({ ...draft, heroHeadline: e.target.value })} /></F>
           <F label="Subtitle"><Textarea rows={3} value={draft.heroSubtitle} onChange={(e) => setDraft({ ...draft, heroSubtitle: e.target.value })} /></F>
+        </Panel>
+        <Panel title="Hero Featured Product">
+          <p className="text-xs text-muted-foreground mb-2">
+            Select a product to spotlight prominently inside the homepage hero section.
+          </p>
+          <F label="Select Product">
+            <select
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={draft.heroFeaturedProductId || ""}
+              onChange={(e) => setDraft({ ...draft, heroFeaturedProductId: e.target.value })}
+            >
+              <option value="">-- None (Hide Featured Product Box) --</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.brand})
+                </option>
+              ))}
+            </select>
+          </F>
+          <F label="Custom Thumbnail Image URL (Optional)">
+            <Input
+              placeholder="Leave empty to use product's main image"
+              value={draft.heroFeaturedThumbnail || ""}
+              onChange={(e) => setDraft({ ...draft, heroFeaturedThumbnail: e.target.value })}
+            />
+          </F>
+          {(() => {
+            const selectedProduct = products.find((p) => p.id === draft.heroFeaturedProductId);
+            if (!selectedProduct) {
+              return (
+                <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
+                  No product selected. The featured product card will be hidden from the homepage hero.
+                </div>
+              );
+            }
+            const effectiveImage = (draft.heroFeaturedThumbnail && draft.heroFeaturedThumbnail.trim()) || selectedProduct.image;
+            return (
+              <div className="rounded-lg border p-3 bg-muted/30 space-y-2 text-xs">
+                <div className="font-semibold text-foreground flex items-center justify-between">
+                  <span>Selected Product Preview</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{selectedProduct.id}</span>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <img
+                    src={effectiveImage}
+                    alt={selectedProduct.name}
+                    className="size-14 rounded-md object-cover border bg-background shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground truncate">{selectedProduct.name}</div>
+                    <div className="text-muted-foreground line-clamp-1">
+                      {selectedProduct.tagline || selectedProduct.description || "No description"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-primary">
+                      View link: /product/{selectedProduct.id}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </Panel>
         <Panel title="Why choose DATAZONe">
           <div className="space-y-3">

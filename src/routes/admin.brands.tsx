@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/brands")({ component: BrandsPage });
 
@@ -34,7 +34,7 @@ function BrandsPage() {
               </div>
               <div className="flex flex-col gap-1">
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditing(b)}><Pencil className="size-4" /></Button>
-                <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteBrand(b.id); toast.success("Deleted"); }}><Trash2 className="size-4" /></Button>
+                <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteBrand(b.id); adminToast.success("Brand deleted", { description: "The brand was removed." }); }}><Trash2 className="size-4" /></Button>
               </div>
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs">
@@ -57,7 +57,7 @@ function BrandsPage() {
           )}
           <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={() => { if (editing) { admin.saveBrand(editing); setEditing(null); toast.success("Saved"); } }}>Save</Button>
+            <Button onClick={() => { if (editing) { admin.saveBrand(editing); setEditing(null); adminToast.success(editing.id ? "Brand updated" : "Brand added", { description: editing.name || "The brand has been saved." }); } }}>Save</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Plus, Pencil, Trash2, Image as ImageIcon } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/banners")({ component: BannersPage });
 const TYPES: Banner["type"][] = ["Homepage Hero", "Promotional", "Student Offers", "Seasonal Sale", "New Arrivals"];
@@ -39,7 +39,7 @@ function BannersPage() {
                 <span className="text-muted-foreground">CTA: {b.cta || "—"} → {b.link || "—"}</span>
                 <div className="flex gap-1">
                   <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditing(b)}><Pencil className="size-4" /></Button>
-                  <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteBanner(b.id); toast.success("Deleted"); }}><Trash2 className="size-4" /></Button>
+                  <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={async () => { const ok = await admin.deleteBanner(b.id); if (ok) { adminToast.success("Banner deleted", { description: "The banner was removed." }); } else { adminToast.error("Banner could not be deleted", { description: "Please try again." }); } }}><Trash2 className="size-4" /></Button>
                 </div>
               </div>
             </div>
@@ -66,7 +66,7 @@ function BannersPage() {
           )}
           <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={() => { if (editing) { admin.saveBanner(editing); setEditing(null); toast.success("Saved"); } }}>Save</Button>
+            <Button onClick={async () => { if (editing) { const ok = await admin.saveBanner(editing); setEditing(null); if (ok) { adminToast.success(editing.id ? "Banner updated" : "Banner added", { description: editing.title || "The banner is ready." }); } else { adminToast.error("Banner could not be saved", { description: "Please try again." }); } } }}>Save</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

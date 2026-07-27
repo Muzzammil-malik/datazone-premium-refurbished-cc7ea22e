@@ -1,19 +1,33 @@
 import { inr, type Product } from "@/lib/products";
+import { getAdminState } from "@/lib/admin-store";
 
 export const WHATSAPP_NUMBER = "919999999999";
 
 export function whatsappUrl(message: string) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const settings = getAdminState().settings;
+  const number = (settings?.whatsapp || WHATSAPP_NUMBER).replace(/\D+/g, "");
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-export function productInquiryUrl(p: Product, qty = 1) {
+export function productInquiryUrl(p: Product, qty = 1, selectedVariantIds?: string[]) {
+  const selectedVariants = selectedVariantIds
+    ? p.variants?.filter((v) => selectedVariantIds.includes(v.id)) || []
+    : [];
+  const price = selectedVariants.length > 0
+    ? selectedVariants.reduce((sum, v) => sum + v.price, 0)
+    : p.price;
+  const variantInfo = selectedVariants.length > 0
+    ? selectedVariants.map((v) => `  Variant: ${v.type} - ${v.value}${v.sku ? ` (SKU: ${v.sku})` : ""}`)
+    : [];
+
   const lines = [
     `Hi DATAZONe, I'd like to order this device:`,
     ``,
     `• ${p.name}`,
     `  Brand: ${p.brand}`,
     `  Condition: ${p.condition}`,
-    `  Price: ${inr(p.price)}`,
+    ...variantInfo,
+    `  Price: ${inr(price)}`,
     qty > 1 ? `  Qty: ${qty}` : ``,
     ``,
     `Please share availability and next steps.`,

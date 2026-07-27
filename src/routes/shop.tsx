@@ -43,6 +43,7 @@ function Shop() {
 
   const filtered = useMemo(() => {
     let list = products.filter((p: Product) => {
+      if (p.visibility === "hidden") return false;
       if (brands.length && !brands.includes(p.brand)) return false;
       if (cats.length && !cats.includes(p.category)) return false;
       if (conditions.length && !conditions.includes(p.condition)) return false;

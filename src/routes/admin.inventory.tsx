@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Boxes, PackageCheck, Wrench, PackageX } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/inventory")({ component: InventoryPage });
 
@@ -62,7 +62,7 @@ function InventoryPage() {
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditing(r)}><Pencil className="size-4" /></Button>
-                      <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteInventory(r.id); toast.success("Removed"); }}><Trash2 className="size-4" /></Button>
+                      <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={async () => { const ok = await admin.deleteInventory(r.id); if (ok) { adminToast.success("Inventory removed", { description: "The record was deleted." }); } else { adminToast.error("Inventory record could not be deleted", { description: "Please try again." }); } }}><Trash2 className="size-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -106,7 +106,7 @@ function InventoryPage() {
           )}
           <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={() => { if (editing) { admin.saveInventory(editing); setEditing(null); toast.success("Saved"); } }}>Save</Button>
+            <Button onClick={async () => { if (editing) { const ok = await admin.saveInventory(editing); setEditing(null); if (ok) { adminToast.success(editing.id ? "Inventory updated" : "Inventory added", { description: editing.serial || "The unit record is saved." }); } else { adminToast.error("Inventory could not be saved", { description: "Please try again." }); } } }}>Save</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

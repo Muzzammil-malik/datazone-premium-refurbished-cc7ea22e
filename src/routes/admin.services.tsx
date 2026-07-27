@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/services")({ component: ServicesPage });
 
@@ -33,7 +33,7 @@ function ServicesPage() {
               </div>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditing(s)}><Pencil className="size-4" /></Button>
-                <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteService(s.id); toast.success("Deleted"); }}><Trash2 className="size-4" /></Button>
+                <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={async () => { const ok = await admin.deleteService(s.id); if (ok) { adminToast.success("Service deleted", { description: "The service was removed." }); } else { adminToast.error("Service could not be deleted", { description: "Please try again." }); } }}><Trash2 className="size-4" /></Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3 line-clamp-3">{s.description}</p>
@@ -54,7 +54,7 @@ function ServicesPage() {
           )}
           <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={() => { if (editing) { admin.saveService(editing); setEditing(null); toast.success("Saved"); } }}>Save</Button>
+            <Button onClick={async () => { if (editing) { const ok = await admin.saveService(editing); setEditing(null); if (ok) { adminToast.success(editing.id ? "Service updated" : "Service added", { description: editing.title || "The service has been saved." }); } else { adminToast.error("Service could not be saved", { description: "Please try again." }); } } }}>Save</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

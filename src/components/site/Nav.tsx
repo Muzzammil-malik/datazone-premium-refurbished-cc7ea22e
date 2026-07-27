@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Search, ShoppingBag, Heart, Menu, X, GitCompare } from "lucide-react";
 import { drawers, useStore } from "@/lib/store";
+import { useAdmin } from "@/lib/admin-store";
 
 const links = [
   { to: "/", label: "Home" },
@@ -18,6 +19,7 @@ export function Nav() {
   const cartCount = useStore((s) => s.cart.reduce((n, c) => n + c.qty, 0));
   const wishCount = useStore((s) => s.wishlist.length);
   const compareCount = useStore((s) => s.compare.length);
+  const settings = useAdmin((s) => s.settings);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 8);
     on();
@@ -36,7 +38,7 @@ export function Nav() {
       <div className="container-dz flex h-16 items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-2 group">
           <span className="text-[1.15rem] font-bold tracking-tight">
-            DATAZON<span className="text-[color:var(--accent-blue)]">e</span>
+            {settings.storeName}
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-8">

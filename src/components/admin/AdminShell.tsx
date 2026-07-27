@@ -3,11 +3,13 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Tags, Award, Boxes, MessagesSquare, Wrench, Star,
   BarChart3, LayoutTemplate, Image as ImageIcon, Settings as SettingsIcon,
-  Search, Bell, Sun, Moon, User, Menu, ChevronsLeft, ChevronsRight,
+  Search, Bell, Sun, Moon, User, Menu, ChevronsLeft, ChevronsRight, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/context/AuthContext";
 
 const nav: { to: string; label: string; icon: any; exact?: boolean }[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -48,8 +50,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { dark, toggle } = useTheme();
+  const { logout } = useAuth();
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
+  };
 
   return (
     <div className="min-h-dvh bg-muted/30">
@@ -106,6 +114,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={toggle}>
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </Button>
+            <Button variant="ghost" size="icon" aria-label="Logout" onClick={handleLogout}>
+              <LogOut className="size-4" />
+            </Button>
             <div className="ml-1 inline-flex items-center gap-2 rounded-full border pl-1 pr-3 py-1">
               <span className="grid place-items-center size-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold">DZ</span>
               <span className="hidden sm:inline text-xs font-medium">Admin</span>
@@ -114,6 +125,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </header>
         <main className="p-4 md:p-6 lg:p-8 max-w-[1400px] w-full">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }

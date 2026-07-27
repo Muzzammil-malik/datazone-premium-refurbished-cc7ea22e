@@ -11,7 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Download, Search, Phone } from "lucide-react";
-import { toast } from "sonner";
+import { adminToast } from "@/lib/admin-toast";
 
 export const Route = createFileRoute("/admin/inquiries")({ component: InquiriesPage });
 
@@ -27,16 +27,17 @@ function InquiriesPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [editing, setEditing] = useState<Inquiry | null>(null);
+  const [viewingMessage, setViewingMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => inqs.filter((i) => {
     if (status !== "all" && i.status !== status) return false;
-    if (q) { const t = q.toLowerCase(); if (![i.customer, i.phone, i.productName || ""].some((v) => v.toLowerCase().includes(t))) return false; }
+    if (q) { const t = q.toLowerCase(); if (![i.customer, i.phone, i.notes || ""].some((v) => v.toLowerCase().includes(t))) return false; }
     return true;
   }), [inqs, q, status]);
 
   const exportCSV = () => {
-    const rows = [["Customer", "Phone", "Product", "Source", "Date", "Status", "Notes"]];
-    filtered.forEach((i) => rows.push([i.customer, i.phone, i.productName || "", i.source, new Date(i.date).toLocaleString(), i.status, i.notes || ""]));
+    const rows = [["Customer", "Phone", "Message", "Source", "Date", "Status", "Notes"]];
+    filtered.forEach((i) => rows.push([i.customer, i.phone, i.notes || "", i.source, new Date(i.date).toLocaleString(), i.status, ""]));
     const csv = rows.map((r) => r.map((v) => `"${(v || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -53,7 +54,7 @@ function InquiriesPage() {
         <div className="p-3 border-b flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input placeholder="Search customer, phone, product…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8 h-9" />
+            <Input placeholder="Search customer, phone, message…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8 h-9" />
           </div>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
@@ -63,7 +64,7 @@ function InquiriesPage() {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Customer</TableHead><TableHead>Phone</TableHead><TableHead>Product</TableHead>
+              <TableHead>Customer</TableHead><TableHead>Phone</TableHead><TableHead>Message</TableHead>
               <TableHead>Source</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead><TableHead className="w-16"></TableHead>
             </TableRow></TableHeader>
             <TableBody>
@@ -71,11 +72,19 @@ function InquiriesPage() {
                 <TableRow key={i.id}>
                   <TableCell className="font-medium text-sm">{i.customer}</TableCell>
                   <TableCell className="text-sm"><a href={`tel:${i.phone}`} className="inline-flex items-center gap-1 hover:underline"><Phone className="size-3" /> {i.phone}</a></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{i.productName || "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-xs">
+                    <button
+                      onClick={() => setViewingMessage(i.notes || "")}
+                      className="text-left hover:text-foreground transition truncate block w-full"
+                      title="Click to view full message"
+                    >
+                      {i.notes?.split("Message: ")[1]?.split("\n\nEmail:")[0] || i.notes || "—"}
+                    </button>
+                  </TableCell>
                   <TableCell><Badge variant="outline">{i.source}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{new Date(i.date).toLocaleString()}</TableCell>
                   <TableCell>
-                    <Select value={i.status} onValueChange={(v) => admin.saveInquiry({ ...i, status: v as Inquiry["status"] })}>
+                    <Select value={i.status} onValueChange={async (v) => { const ok = await admin.saveInquiry({ ...i, status: v as Inquiry["status"] }); if (ok) { adminToast.success("Inquiry status updated", { description: `${v} status saved.` }); } else { adminToast.error("Inquiry status could not be updated", { description: "Please try again." }); } }}>
                       <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
@@ -83,7 +92,7 @@ function InquiriesPage() {
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditing(i)}><Pencil className="size-4" /></Button>
-                      <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={() => { admin.deleteInquiry(i.id); toast.success("Deleted"); }}><Trash2 className="size-4" /></Button>
+                      <Button size="icon" variant="ghost" className="size-8 text-destructive" onClick={async () => { const ok = await admin.deleteInquiry(i.id); if (ok) { adminToast.success("Inquiry deleted", { description: "The inquiry was removed." }); } else { adminToast.error("Inquiry could not be deleted", { description: "Please try again." }); } }}><Trash2 className="size-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -100,12 +109,6 @@ function InquiriesPage() {
             <div className="mt-4 space-y-3">
               <F label="Customer"><Input value={editing.customer} onChange={(e) => setEditing({ ...editing, customer: e.target.value })} /></F>
               <F label="Phone"><Input value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} /></F>
-              <F label="Product">
-                <Select value={editing.productId || ""} onValueChange={(v) => { const p = products.find((x) => x.id === v); setEditing({ ...editing, productId: v, productName: p?.name }); }}>
-                  <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
-                  <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </F>
               <F label="Source">
                 <Select value={editing.source} onValueChange={(v) => setEditing({ ...editing, source: v as Inquiry["source"] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -118,12 +121,27 @@ function InquiriesPage() {
                   <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </F>
-              <F label="Notes"><Textarea rows={4} value={editing.notes || ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></F>
+              <F label="Message"><Textarea rows={4} value={editing.notes || ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></F>
             </div>
           )}
           <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={() => { if (editing) { admin.saveInquiry(editing); setEditing(null); toast.success("Saved"); } }}>Save</Button>
+            <Button onClick={async () => { if (editing) { const ok = await admin.saveInquiry(editing); setEditing(null); if (ok) { adminToast.success(editing.id ? "Inquiry updated" : "Inquiry added", { description: editing.customer || "The inquiry has been saved." }); } else { adminToast.error("Inquiry could not be saved", { description: "Please try again." }); } } }}>Save</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={!!viewingMessage} onOpenChange={(o) => !o && setViewingMessage(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader><SheetTitle>Full Message</SheetTitle></SheetHeader>
+          {viewingMessage && (
+            <div className="mt-4">
+              <div className="whitespace-pre-wrap text-sm text-foreground bg-muted p-4 rounded-lg">
+                {viewingMessage}
+              </div>
+            </div>
+          )}
+          <SheetFooter className="mt-6 flex-row gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setViewingMessage(null)}>Close</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

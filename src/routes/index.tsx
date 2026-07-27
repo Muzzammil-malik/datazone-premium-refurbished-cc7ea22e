@@ -2,11 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { ArrowRight, ShieldCheck, Cpu, Truck, Sparkles, Star, PackageCheck, Recycle } from "lucide-react";
-import heroLaptop from "@/assets/hero-laptop.jpg";
-import heroDesktop from "@/assets/hero-desktop.jpg";
+import { ArrowRight, ShieldCheck, Cpu, Truck, Sparkles, Star, PackageCheck, Recycle, Award } from "lucide-react";
+import heroLaptop from "@/assets/lptp.png";
+import heroDesktop from "@/assets/dstp.png";
+import heroMonitor from "@/assets/mntr.png";
+import heroAcc from "@/assets/accsr.png";
 import refurb from "@/assets/refurb-process.jpg";
 import { useProducts } from "@/lib/products";
+import { useAdmin } from "@/lib/admin-store";
 import { ProductCard } from "@/components/site/ProductCard";
 import { BrandMarquee } from "@/components/site/Marquee";
 import { Reveal } from "@/components/site/Reveal";
@@ -47,6 +50,20 @@ function Hero() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+
+  const homepage = useAdmin((s) => s.homepage);
+  const products = useAdmin((s) => s.products);
+
+  const heroProduct = homepage.heroFeaturedProductId
+    ? products.find((p) => p.id === homepage.heroFeaturedProductId)
+    : null;
+
+  const heroImage =
+    (homepage.heroFeaturedThumbnail && homepage.heroFeaturedThumbnail.trim()) ||
+    (heroProduct ? heroProduct.image : heroLaptop);
+
+  const headlineParts = (homepage.heroHeadline || "Serious tech.\nSensible price.").split("\n");
+
   return (
     <section ref={ref} className="relative overflow-hidden pt-20 md:pt-28">
       <div className="container-dz">
@@ -65,9 +82,13 @@ function Hero() {
             transition={{ duration: 0.9, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
             className="display-xl mt-6"
           >
-            Serious tech.
-            <br />
-            <span className="text-ink-soft">Sensible price.</span>
+            {headlineParts[0]}
+            {headlineParts[1] && (
+              <>
+                <br />
+                <span className="text-ink-soft">{headlineParts[1]}</span>
+              </>
+            )}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -75,8 +96,8 @@ function Hero() {
             transition={{ duration: 0.9, delay: 0.25 }}
             className="mt-6 max-w-xl mx-auto text-base md:text-lg text-ink-soft"
           >
-            Refurbished laptops, desktops and monitors from the brands you trust —
-            restored to like-new, warrantied for life at work.
+            {homepage.heroSubtitle ||
+              "Refurbished laptops, desktops and monitors from the brands you trust — restored to like-new, warrantied for life at work."}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -94,31 +115,38 @@ function Hero() {
           </motion.div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 40 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-          className="relative mt-16 md:mt-24 mx-auto max-w-6xl"
-        >
-          <div className="relative aspect-[16/10] rounded-3xl overflow-hidden bg-surface hairline">
-            <img
-              src={heroLaptop}
-              alt="Premium refurbished laptop on studio white background"
-              width={1600}
-              height={1000}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-x-0 bottom-0 p-6 md:p-10 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <div className="eyebrow">Featured</div>
-                <div className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">ThinkPad X1 Carbon · Grade A+</div>
+        {heroProduct && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1.2, delay: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+            className="relative mt-16 md:mt-24 mx-auto max-w-6xl"
+          >
+            <div className="relative aspect-[16/10] rounded-3xl overflow-hidden bg-surface hairline">
+              <img
+                src={heroImage}
+                alt={heroProduct.name}
+                width={1600}
+                height={1000}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 p-6 md:p-10 flex flex-wrap items-end justify-between gap-4 bg-gradient-to-t from-background/90 via-background/40 to-transparent">
+                <div>
+                  <div className="eyebrow">Featured</div>
+                  <div className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">{heroProduct.name}</div>
+                  {(heroProduct.tagline || heroProduct.description) && (
+                    <p className="mt-1 text-xs md:text-sm text-ink-soft line-clamp-1 max-w-lg">
+                      {heroProduct.tagline || heroProduct.description}
+                    </p>
+                  )}
+                </div>
+                <Link to="/product/$id" params={{ id: heroProduct.id }} className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm font-medium hover:opacity-90 transition">
+                  View <ArrowRight className="size-4" />
+                </Link>
               </div>
-              <Link to="/product/$id" params={{ id: "dz-thinkpad-x1" }} className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm">
-                View <ArrowRight className="size-4" />
-              </Link>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );
@@ -126,9 +154,9 @@ function Hero() {
 
 function TrustBar() {
   const items = [
-    { icon: ShieldCheck, label: "1-Year Warranty" },
+    { icon: ShieldCheck, label: "1-Month Warranty" },
     { icon: PackageCheck, label: "100-Point Inspection" },
-    { icon: Truck, label: "Free Shipping · Pan India" },
+    { icon: Award, label: "Branded Products" },
     { icon: Recycle, label: "7-Day Easy Returns" },
   ];
   return (
@@ -150,7 +178,7 @@ function TrustBar() {
 function WhyDatazone() {
   const items = [
     { title: "Inspected by experts", body: "Every unit passes a 100-point diagnostic covering battery, display, ports, storage, thermals and more.", icon: Cpu },
-    { title: "Warranty, always", body: "Every purchase includes a 1-year DATAZONe warranty and 7-day no-questions returns.", icon: ShieldCheck },
+    { title: "Warranty, always", body: "Every purchase includes a 1-month DATAZONe warranty and 7-day no-questions returns.", icon: ShieldCheck },
     { title: "Fair, transparent grading", body: "Grade A+, A, and B — with real photos and honest condition notes, never surprises.", icon: Star },
   ];
   return (
@@ -206,10 +234,10 @@ function FeaturedProducts() {
 
 function Categories() {
   const cats = [
-    { label: "Laptops", count: "120+", img: heroLaptop },
-    { label: "Desktops", count: "45+", img: heroDesktop },
-    { label: "Monitors", count: "60+", img: heroDesktop },
-    { label: "Accessories", count: "200+", img: heroLaptop },
+    { label: "Laptops", count: "10+", img: heroLaptop },
+    { label: "Desktops", count: "70+", img: heroDesktop },
+    { label: "Monitors", count: "20+", img: heroMonitor },
+    { label: "Accessories", count: "20+", img: heroAcc },
   ];
   return (
     <section className="container-dz mt-28 md:mt-40">
@@ -287,7 +315,7 @@ function RefurbishmentProcess() {
 
 function Stats() {
   const stats = [
-    { n: 12500, s: "+", l: "Devices restored" },
+    { n: 90, s: "+", l: "Devices restored" },
     { n: 99, s: "%", l: "Customer satisfaction" },
     { n: 100, s: "-pt", l: "Inspection process" },
     { n: 24, s: "h", l: "Support response" },

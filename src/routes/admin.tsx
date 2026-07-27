@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -9,8 +11,12 @@ export const Route = createFileRoute("/admin")({
     ],
   }),
   component: () => (
-    <AdminShell>
-      <Outlet />
-    </AdminShell>
+    <AuthProvider>
+      <ProtectedRoute>
+        <AdminShell>
+          <Outlet />
+        </AdminShell>
+      </ProtectedRoute>
+    </AuthProvider>
   ),
 });

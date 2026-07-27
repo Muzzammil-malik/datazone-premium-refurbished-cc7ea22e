@@ -215,3 +215,34 @@
     box-shadow: 0 30px 60px -30px oklch(0 0 0 / 0.15);
   }
 }
+
+.featured-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #f7cf61 0%, #b77a1b 45%, #f7cf61 100%);
+  box-shadow: 0 10px 24px rgba(183, 122, 27, 0.24), inset 0 1px 0 rgba(255,255,255,0.35);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.featured-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.34) 45%, transparent 70%);
+  transform: translateX(-120%);
+  animation: featured-shimmer 2.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes featured-shimmer {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
