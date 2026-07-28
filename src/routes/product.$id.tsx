@@ -37,6 +37,7 @@ function ProductPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [zoomStyle, setZoomStyle] = useState({ transform: "scale(1)", transformOrigin: "50% 50%" });
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [expandedDescription, setExpandedDescription] = useState(false);
   const galleryRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { if (p) recent.push(p.id); }, [p?.id]);
   const gallery = useMemo(() => {
@@ -251,9 +252,18 @@ function ProductPage() {
 
           {p.description && (
             <div className="mt-6 rounded-lg bg-surface/50 px-4 py-3">
-              <p className="text-sm text-ink-soft leading-relaxed line-clamp-2">
+              <p className={`text-sm text-ink-soft leading-relaxed ${expandedDescription ? "" : "line-clamp-2"}`}>
                 {p.description}
               </p>
+              {p.description.length > 100 && (
+                <button
+                  type="button"
+                  onClick={() => setExpandedDescription(!expandedDescription)}
+                  className="mt-2 text-xs text-foreground hover:underline"
+                >
+                  {expandedDescription ? "Show less" : "Read more"}
+                </button>
+              )}
             </div>
           )}
 
