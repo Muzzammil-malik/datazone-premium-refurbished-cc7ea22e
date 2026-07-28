@@ -9,16 +9,27 @@ export function whatsappUrl(message: string) {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-export function productInquiryUrl(p: Product, qty = 1, selectedVariantIds?: string[]) {
-  const selectedVariants = selectedVariantIds
-    ? p.variants?.filter((v) => selectedVariantIds.includes(v.id)) || []
-    : [];
-  const price = selectedVariants.length > 0
-    ? selectedVariants.reduce((sum, v) => sum + v.price, 0)
-    : p.price;
-  const variantInfo = selectedVariants.length > 0
-    ? selectedVariants.map((v) => `  Variant: ${v.type} - ${v.value}${v.sku ? ` (SKU: ${v.sku})` : ""}`)
-    : [];
+export function productInquiryUrl(p: Product, qty = 1, selectedVariants?: Record<string, string>) {
+  // Calculate price based on base price + variant adjustments
+  const basePrice = p.basePrice || p.price || 0;
+  let price = basePrice;
+  const variantInfo: string[] = [];
+  
+  if (selectedVariants && p.variantGroups) {
+    const selectedOptionIds = Object.values(selectedVariants);
+    const selectedOptions = p.variantGroups.flatMap((g) => g.options || []).filter((o) => selectedOptionIds.includes(o.id));
+    const adjustmentSum = selectedOptions.reduce((sum, o) => sum + (o.priceAdjustment || 0), 0);
+    price = basePrice + adjustmentSum;
+    
+    // Build variant info string
+    p.variantGroups.forEach((group) => {
+      const selectedOptionId = selectedVariants[group.id];
+      const option = group.options?.find((o) => o.id === selectedOptionId);
+      if (option) {
+        variantInfo.push(`  ${group.name}: ${option.value}`);
+      }
+    });
+  }
 
   const lines = [
     `Hi DATAZONe, I'd like to order this device:`,

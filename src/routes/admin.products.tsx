@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/admin/AdminShell";
-import { useAdmin, admin, newId, type AdminProduct, type ProductVariant } from "@/lib/admin-store";
+import { useAdmin, admin, newId, type AdminProduct, type ProductVariant, type VariantOption, type VariantGroup } from "@/lib/admin-store";
 import { inr } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,14 +316,186 @@ function ProductForm({
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Price (₹)"><Input type="number" value={draft.price} onChange={(e) => set({ price: Number(e.target.value) })} /></Field>
+                <Field label="Base Price (₹)">
+                  <Input type="number" value={draft.basePrice ?? draft.price} onChange={(e) => set({ basePrice: Number(e.target.value), price: Number(e.target.value) })} />
+                  <p className="text-xs text-muted-foreground mt-1">Base price before variant adjustments</p>
+                </Field>
                 <Field label="Original price (₹)"><Input type="number" value={draft.original} onChange={(e) => set({ original: Number(e.target.value) })} /></Field>
               </div>
             </Section>
 
-            <Section title="Variants">
+            <Section title="Variant Groups">
               <div className="text-xs text-muted-foreground mb-3">
-                Add product variants like RAM, Storage, Color, etc. Each variant can have its own price and stock.
+                Create variant groups (e.g., RAM, Storage) with multiple options. Each option has a price adjustment.
+              </div>
+              <div className="space-y-6">
+                {(draft.variantGroups || []).map((group, groupIndex) => (
+                  <div key={group.id} className="rounded-lg border bg-card p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">{group.name || `Group ${groupIndex + 1}`}</span>
+                        <Input
+                          className="h-7 w-40 text-xs"
+                          value={group.name}
+                          onChange={(e) => {
+                            const next = [...(draft.variantGroups || [])];
+                            next[groupIndex] = { ...next[groupIndex], name: e.target.value };
+                            set({ variantGroups: next });
+                          }}
+                          placeholder="Group name (e.g., RAM)"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => {
+                          const next = (draft.variantGroups || []).filter((_, i) => i !== groupIndex);
+                          set({ variantGroups: next });
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {(group.options || []).map((option, optionIndex) => (
+                        <div key={option.id} className="rounded-md border bg-background p-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium">Option {optionIndex + 1}</span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-destructive"
+                              onClick={() => {
+                                const next = [...(draft.variantGroups || [])];
+                                next[groupIndex] = { ...next[groupIndex], options: next[groupIndex].options?.filter((_, i) => i !== optionIndex) || [] };
+                                set({ variantGroups: next });
+                              }}
+                            >
+                              <Trash2 className="size-3" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Field label="Value">
+                              <Input
+                                className="h-8 text-sm"
+                                value={option.value}
+                                onChange={(e) => {
+                                  const next = [...(draft.variantGroups || [])];
+                                  next[groupIndex] = { 
+                                    ...next[groupIndex], 
+                                    options: next[groupIndex].options?.map((o, i) => i === optionIndex ? { ...o, value: e.target.value } : o) || []
+                                  };
+                                  set({ variantGroups: next });
+                                }}
+                                placeholder="8GB, 16GB, etc."
+                              />
+                            </Field>
+                            <Field label="Price Adjustment (₹)">
+                              <Input
+                                type="number"
+                                className="h-8 text-sm"
+                                value={option.priceAdjustment}
+                                onChange={(e) => {
+                                  const next = [...(draft.variantGroups || [])];
+                                  next[groupIndex] = { 
+                                    ...next[groupIndex], 
+                                    options: next[groupIndex].options?.map((o, i) => i === optionIndex ? { ...o, priceAdjustment: Number(e.target.value) } : o) || []
+                                  };
+                                  set({ variantGroups: next });
+                                }}
+                                placeholder="0"
+                              />
+                            </Field>
+                            <Field label="Stock">
+                              <Input
+                                type="number"
+                                className="h-8 text-sm"
+                                value={option.stock}
+                                onChange={(e) => {
+                                  const next = [...(draft.variantGroups || [])];
+                                  next[groupIndex] = { 
+                                    ...next[groupIndex], 
+                                    options: next[groupIndex].options?.map((o, i) => i === optionIndex ? { ...o, stock: Number(e.target.value) } : o) || []
+                                  };
+                                  set({ variantGroups: next });
+                                }}
+                              />
+                            </Field>
+                            <Field label="Availability">
+                              <Select
+                                value={option.availability}
+                                onValueChange={(v) => {
+                                  const next = [...(draft.variantGroups || [])];
+                                  next[groupIndex] = { 
+                                    ...next[groupIndex], 
+                                    options: next[groupIndex].options?.map((o, i) => i === optionIndex ? { ...o, availability: v as VariantOption["availability"] } : o) || []
+                                  };
+                                  set({ variantGroups: next });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {["In stock", "Low stock", "Out of stock"].map((s) => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          const next = [...(draft.variantGroups || [])];
+                          const newOption: VariantOption = {
+                            id: `dz-${newId()}`,
+                            variantGroupId: group.id,
+                            value: "",
+                            priceAdjustment: 0,
+                            stock: 1,
+                            availability: "In stock",
+                            order: (group.options || []).length,
+                          };
+                          next[groupIndex] = { ...next[groupIndex], options: [...(next[groupIndex].options || []), newOption] };
+                          set({ variantGroups: next });
+                        }}
+                      >
+                        <Plus className="size-3 mr-1" /> Add Option
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const newGroup: VariantGroup = {
+                      id: `dz-${newId()}`,
+                      productId: draft.id,
+                      name: "",
+                      order: (draft.variantGroups || []).length,
+                      options: [],
+                    };
+                    set({ variantGroups: [...(draft.variantGroups || []), newGroup] });
+                  }}
+                >
+                  <Plus className="size-4 mr-2" /> Add Variant Group
+                </Button>
+              </div>
+            </Section>
+
+            <Section title="Legacy Variants (Deprecated)">
+              <div className="text-xs text-muted-foreground mb-3">
+                Legacy variant system. Use Variant Groups above for new products.
               </div>
               <div className="space-y-4">
                 {(draft.variants || []).map((variant, index) => (

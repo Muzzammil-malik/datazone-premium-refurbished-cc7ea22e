@@ -49,27 +49,43 @@ function ProductPage() {
     setActiveImage(0);
   }, [p?.id]);
 
-  // Group variants by type and auto-select first option
+  // Use new grouped variant structure if available, otherwise fall back to old flat variants
   const variantGroups = useMemo(() => {
+    if (p?.variantGroups && p.variantGroups.length > 0) {
+      return p.variantGroups;
+    }
+    // Fallback to old flat variant structure
     if (!p?.variants || p.variants.length === 0) return [];
     const groups: Record<string, typeof p.variants> = {};
     p.variants.forEach((v) => {
       if (!groups[v.type]) groups[v.type] = [];
       groups[v.type].push(v);
     });
-    return Object.entries(groups).map(([type, variants]) => ({
-      type,
-      variants: variants.sort((a, b) => a.order - b.order),
-    }));
-  }, [p?.variants]);
+    return Object.entries(groups).map(([name, variants]) => ({
+      id: `legacy-${name}`,
+      productId: p.id,
+      name,
+      order: 0,
+      options: variants.map((v) => ({
+        id: v.id,
+        variantGroupId: `legacy-${name}`,
+        value: v.value,
+        priceAdjustment: v.price - (p.price || 0),
+        originalPriceAdjustment: v.originalPrice ? v.originalPrice - (p.original || 0) : undefined,
+        stock: v.stock,
+        availability: v.availability,
+        order: v.order,
+      })),
+    })) as any;
+  }, [p?.variantGroups, p?.variants, p?.id, p?.price, p?.original]);
 
-  // Auto-select first variant of each type
+  // Auto-select first option of each group
   useEffect(() => {
     if (variantGroups.length > 0) {
       const autoSelected: Record<string, string> = {};
-      variantGroups.forEach((group) => {
-        if (group.variants.length > 0 && !selectedVariants[group.type]) {
-          autoSelected[group.type] = group.variants[0].id;
+      variantGroups.forEach((group: any) => {
+        if (group.options && group.options.length > 0 && !selectedVariants[group.id]) {
+          autoSelected[group.id] = group.options[0].id;
         }
       });
       if (Object.keys(autoSelected).length > 0) {
@@ -78,26 +94,26 @@ function ProductPage() {
     }
   }, [variantGroups, p?.id]);
 
-  // Calculate price based on selected variants (sum of all selected variant prices)
+  // Calculate price based on base price + selected variant adjustments
   const currentPrice = useMemo(() => {
-    if (!p?.variants || p.variants.length === 0) return p?.price || 0;
-    const selectedVariantIds = Object.values(selectedVariants);
-    if (selectedVariantIds.length === 0) return p?.price || 0;
-    const selectedVariantsList = p.variants.filter((v) => selectedVariantIds.includes(v.id));
-    if (selectedVariantsList.length === 0) return p?.price || 0;
-    const variantsPriceSum = selectedVariantsList.reduce((sum, v) => sum + v.price, 0);
-    return variantsPriceSum;
-  }, [p?.variants, selectedVariants, p?.price]);
+    const basePrice = p?.basePrice || p?.price || 0;
+    if (variantGroups.length === 0) return basePrice;
+    const selectedOptionIds = Object.values(selectedVariants);
+    if (selectedOptionIds.length === 0) return basePrice;
+    const selectedOptions = variantGroups.flatMap((g: any) => g.options || []).filter((o: any) => selectedOptionIds.includes(o.id));
+    const adjustmentSum = selectedOptions.reduce((sum: number, o: any) => sum + (o.priceAdjustment || 0), 0);
+    return basePrice + adjustmentSum;
+  }, [p?.basePrice, p?.price, variantGroups, selectedVariants]);
 
   const currentOriginalPrice = useMemo(() => {
-    if (!p?.variants || p.variants.length === 0) return p?.original || 0;
-    const selectedVariantIds = Object.values(selectedVariants);
-    if (selectedVariantIds.length === 0) return p?.original || 0;
-    const selectedVariantsList = p.variants.filter((v) => selectedVariantIds.includes(v.id));
-    if (selectedVariantsList.length === 0) return p?.original || 0;
-    const variantsOriginalPriceSum = selectedVariantsList.reduce((sum, v) => sum + (v.originalPrice || 0), 0);
-    return variantsOriginalPriceSum || p?.original || 0;
-  }, [p?.variants, selectedVariants, p?.original]);
+    const baseOriginal = p?.original || 0;
+    if (variantGroups.length === 0) return baseOriginal;
+    const selectedOptionIds = Object.values(selectedVariants);
+    if (selectedOptionIds.length === 0) return baseOriginal;
+    const selectedOptions = variantGroups.flatMap((g: any) => g.options || []).filter((o: any) => selectedOptionIds.includes(o.id));
+    const adjustmentSum = selectedOptions.reduce((sum: number, o: any) => sum + (o.originalPriceAdjustment || o.priceAdjustment || 0), 0);
+    return baseOriginal + adjustmentSum;
+  }, [p?.original, variantGroups, selectedVariants]);
 
   if (!p) {
     return (
@@ -212,7 +228,7 @@ function ProductPage() {
 
               <div className="mt-8 flex gap-3">
                 <a
-                  href={productInquiryUrl(p, 1, Object.values(selectedVariants))}
+                  href={productInquiryUrl(p, 1, selectedVariants)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 rounded-full bg-foreground text-background py-4 text-sm font-medium hover:opacity-90 transition inline-flex items-center justify-center gap-2"
@@ -269,22 +285,22 @@ function ProductPage() {
 
           {variantGroups.length > 0 && (
             <div className="mt-6 space-y-4">
-              {variantGroups.map((group) => (
-                <div key={group.type}>
-                  <div className="text-xs font-medium text-ink-soft mb-2">{group.type}</div>
+              {variantGroups.map((group: any) => (
+                <div key={group.id}>
+                  <div className="text-xs font-medium text-ink-soft mb-2">{group.name}</div>
                   <div className="flex flex-wrap gap-2">
-                    {group.variants.map((variant) => (
+                    {group.options?.map((option: any) => (
                       <button
-                        key={variant.id}
+                        key={option.id}
                         type="button"
-                        onClick={() => setSelectedVariants((prev) => ({ ...prev, [group.type]: variant.id }))}
+                        onClick={() => setSelectedVariants((prev) => ({ ...prev, [group.id]: option.id }))}
                         className={`px-4 py-2 rounded-full text-sm border transition ${
-                          selectedVariants[group.type] === variant.id
+                          selectedVariants[group.id] === option.id
                             ? "bg-foreground text-background border-foreground"
                             : "bg-background border-hairline hover:border-foreground"
                         }`}
                       >
-                        {variant.value}
+                        {option.value}
                       </button>
                     ))}
                   </div>

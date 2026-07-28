@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Product } from "./products";
 
-type CartItem = { id: string; qty: number };
+type CartItem = { id: string; qty: number; selectedVariants?: Record<string, string> };
 type State = {
   cart: CartItem[];
   wishlist: string[];
@@ -52,19 +52,19 @@ export function useStore<T>(selector: (s: State) => T): T {
 
 // Cart
 export const cart = {
-  add(id: string, qty = 1) {
-    const existing = state.cart.find((c) => c.id === id);
+  add(id: string, qty = 1, selectedVariants?: Record<string, string>) {
+    const existing = state.cart.find((c) => c.id === id && JSON.stringify(c.selectedVariants) === JSON.stringify(selectedVariants));
     const next = existing
-      ? state.cart.map((c) => (c.id === id ? { ...c, qty: c.qty + qty } : c))
-      : [...state.cart, { id, qty }];
+      ? state.cart.map((c) => (c.id === id && JSON.stringify(c.selectedVariants) === JSON.stringify(selectedVariants) ? { ...c, qty: c.qty + qty } : c))
+      : [...state.cart, { id, qty, selectedVariants }];
     set({ cart: next });
   },
-  remove(id: string) {
-    set({ cart: state.cart.filter((c) => c.id !== id) });
+  remove(id: string, selectedVariants?: Record<string, string>) {
+    set({ cart: state.cart.filter((c) => c.id !== id || JSON.stringify(c.selectedVariants) !== JSON.stringify(selectedVariants)) });
   },
-  setQty(id: string, qty: number) {
-    if (qty <= 0) return cart.remove(id);
-    set({ cart: state.cart.map((c) => (c.id === id ? { ...c, qty } : c)) });
+  setQty(id: string, qty: number, selectedVariants?: Record<string, string>) {
+    if (qty <= 0) return cart.remove(id, selectedVariants);
+    set({ cart: state.cart.map((c) => (c.id === id && JSON.stringify(c.selectedVariants) === JSON.stringify(selectedVariants) ? { ...c, qty } : c)) });
   },
   clear() {
     set({ cart: [] });
@@ -146,7 +146,15 @@ export function cartTotals(items: CartItem[], byId: (id: string) => Product | un
   for (const it of items) {
     const p = byId(it.id);
     if (!p) continue;
-    subtotal += p.price * it.qty;
+    // Calculate price based on base price + variant adjustments
+    let itemPrice = p.basePrice || p.price || 0;
+    if (it.selectedVariants && p.variantGroups) {
+      const selectedOptionIds = Object.values(it.selectedVariants);
+      const selectedOptions = p.variantGroups.flatMap((g) => g.options || []).filter((o) => selectedOptionIds.includes(o.id));
+      const adjustmentSum = selectedOptions.reduce((sum, o) => sum + (o.priceAdjustment || 0), 0);
+      itemPrice += adjustmentSum;
+    }
+    subtotal += itemPrice * it.qty;
     count += it.qty;
   }
   const shipping = subtotal > 0 && subtotal < 50000 ? 499 : 0;
